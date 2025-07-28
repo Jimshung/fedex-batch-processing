@@ -1,0 +1,21 @@
+{
+  "name": "fedex-batch-processing",
+  "version": "1.0.0",
+  "description": "FedEx API 認證測試",
+  "main": "test.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": [
+    "fedex",
+    "api",
+    "google-sheets",
+    "batch-processing"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
