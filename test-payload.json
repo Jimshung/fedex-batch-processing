@@ -1,0 +1,25 @@
+{
+  "id": 1234567890123,
+  "email": "customer@example.com",
+  "number": 1001,
+  "total_price": "1250.00",
+  "currency": "TWD",
+  "financial_status": "paid",
+  "fulfillment_status": null,
+  "shipping_address": {
+    "first_name": "小明",
+    "last_name": "王",
+    "address1": "信義路五段7號 89樓",
+    "city": "台北市",
+    "country": "Taiwan",
+    "zip": "110"
+  },
+  "line_items": [
+    {
+      "id": 1122334455667,
+      "title": "經典款白T恤",
+      "quantity": 2,
+      "price": "500.00"
+    }
+  ]
+}

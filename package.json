@@ -1,21 +1,22 @@
 {
   "name": "fedex-batch-processing",
   "version": "1.0.0",
-  "description": "FedEx API 認證測試",
-  "main": "test.js",
+  "description": "一個用於處理 FedEx 和 Shopify Webhook 的後端服務。",
+  "main": "index.js",
   "scripts": {
-    "test": "node test.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "axios": "^1.6.0",
-    "dotenv": "^16.3.1"
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   },
   "keywords": [
     "fedex",
-    "api",
-    "google-sheets",
-    "batch-processing"
+    "shopify",
+    "webhook",
+    "api"
   ],
-  "author": "Your Name",
+  "author": "Jim Shun",
   "license": "MIT"
 }
