@@ -1,22 +1,15 @@
 {
   "name": "fedex-batch-processing",
-  "version": "1.0.0",
-  "description": "一個用於處理 FedEx 和 Shopify Webhook 的後端服務。",
+  "version": "2.0.0",
+  "description": "一個用於從 Shopify 輪詢訂單並透過 FedEx 處理的後端服務。",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "dotenv": "^16.4.5"
   },
-  "keywords": [
-    "fedex",
-    "shopify",
-    "webhook",
-    "api"
-  ],
   "author": "Jim Shun",
   "license": "MIT"
 }

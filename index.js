@@ -1,72 +1,69 @@
 // index.js
-const express = require('express');
-const crypto = require('crypto');
 require('dotenv').config();
+const axios = require('axios');
 
-const app = express();
-const PORT = process.env.PORT || 8080;
+// --- 從環境變數讀取 Shopify 設定 ---
+const SHOPIFY_SHOP_NAME = process.env.SHOPIFY_SHOP_NAME;
+const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+const API_VERSION = '2024-07'; // 建議使用最新的穩定版本
 
-const SHOPIFY_WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
-
-// 在 Cloud Run 環境中，我們期望這個變數由服務設定提供。
-// 我們只在它存在時才進行記錄，如果不存在，則在驗證函式中處理。
-if (SHOPIFY_WEBHOOK_SECRET) {
-  console.log('ℹ️  成功載入 SHOPIFY_WEBHOOK_SECRET。');
-} else {
-  console.warn(
-    '⚠️  警告：未找到 SHOPIFY_WEBHOOK_SECRET 環境變數。Webhook 安全驗證將會失敗。'
+// 檢查必要的環境變數
+if (!SHOPIFY_SHOP_NAME || !SHOPIFY_ACCESS_TOKEN) {
+  console.error(
+    '❌ 錯誤：請在環境變數中設定 SHOPIFY_SHOP_NAME 和 SHOPIFY_ACCESS_TOKEN。'
   );
+  process.exit(1);
 }
 
-app.use(
-  express.json({
-    verify: (req, res, buf) => {
-      req.rawBody = buf;
-    },
-  })
-);
+// 建構 Shopify API 的基礎 URL
+const shopifyApiUrl = `https://${SHOPIFY_SHOP_NAME}.myshopify.com/admin/api/${API_VERSION}/orders.json`;
 
-function verifyShopifyWebhook(req, res, next) {
-  // 如果沒有設定密鑰，直接拒絕請求，增加安全性。
-  if (!SHOPIFY_WEBHOOK_SECRET) {
-    console.error('❌ 驗證失敗：伺服器端未設定 Webhook 密鑰。');
-    return res.status(500).send('伺服器設定錯誤。');
-  }
+/**
+ * 主要執行函式：獲取未出貨的訂單
+ */
+async function fetchUnfulfilledOrders() {
+  console.log('🚀 開始執行輪詢任務：從 Shopify 獲取未出貨訂單...');
 
-  const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-  if (!hmacHeader) {
-    console.error('❌ 驗證失敗：找不到 HMAC 標頭。');
-    return res.status(401).send('無法驗證來源。');
-  }
+  try {
+    const response = await axios.get(shopifyApiUrl, {
+      headers: {
+        'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      params: {
+        // 這是關鍵的篩選條件
+        fulfillment_status: 'unfulfilled',
+        status: 'open', // 只獲取開啟的訂單
+        limit: 50, // 每次最多獲取 50 筆
+      },
+    });
 
-  const hash = crypto
-    .createHmac('sha256', SHOPIFY_WEBHOOK_SECRET)
-    .update(req.rawBody, 'utf-8')
-    .digest('base64');
+    const orders = response.data.orders;
 
-  console.log(`[偵錯] 傳入的 HMAC: ${hmacHeader}`);
-  console.log(`[偵錯] 計算的 HMAC: ${hash}`);
+    if (orders && orders.length > 0) {
+      console.log(`✅ 成功獲取 ${orders.length} 筆未出貨訂單！`);
 
-  if (hash === hmacHeader) {
-    console.log('✅ Webhook 驗證成功！');
-    next();
-  } else {
-    console.error('❌ 驗證失敗：HMAC 簽章不匹配。');
-    res.status(403).send('簽章不匹配，禁止存取。');
+      // 為了方便我們設計後續流程，將第一筆訂單的完整資料印出來
+      console.log('📄 第一筆訂單的範例資料 (JSON):');
+      console.log(JSON.stringify(orders[0], null, 2));
+
+      // 在這裡，我們未來會加入將這些訂單存入 Firestore 的邏輯
+      // for (const order of orders) { ... }
+    } else {
+      console.log('ℹ️  目前沒有需要處理的未出貨訂單。');
+    }
+
+    console.log('✅ 輪詢任務執行完畢。');
+  } catch (error) {
+    console.error('❌ 獲取 Shopify 訂單時發生錯誤:');
+    if (error.response) {
+      console.error(`HTTP 狀態: ${error.response.status}`);
+      console.error('錯誤詳情:', error.response.data);
+    } else {
+      console.error(error.message);
+    }
   }
 }
 
-app.get('/', (req, res) => {
-  res.send('Shopify Webhook 接收器已準備就緒！');
-});
-
-// 注意：verifyShopifyWebhook 依然保留，但你可以根據 Plan B 的說明暫時移除它來進行無金鑰測試。
-app.post('/webhook/shopify/new-order', verifyShopifyWebhook, (req, res) => {
-  console.log('🎉 收到新的訂單資料！');
-  console.log(JSON.stringify(req.body, null, 2));
-  res.status(200).send('接收成功');
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 伺服器正在監聽 port ${PORT}`);
-});
+// 執行主函式
+fetchUnfulfilledOrders();
