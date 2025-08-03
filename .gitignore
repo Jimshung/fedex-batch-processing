@@ -35,3 +35,5 @@ build/
 # 暫存檔案
 tmp/
 temp/ 
+# Google Service Account Key
+gcp-service-account.json

@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "axios": "^1.7.2",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "google-auth-library": "^10.2.0",
+    "googleapis": "^154.1.0"
   },
   "author": "Jim Shun",
   "license": "MIT"
