@@ -1,12 +1,37 @@
 # FedEx 訂單處理系統
 
-一個以 Google Sheet 為中心的訂單審核與處理系統，專為 Serena 設計的優雅工作流程。
+一個以 Google Sheet 為中心的訂單審核與處理系統，具備 Web 認證界面和完整的訂單管理功能。
 
 ## 🎯 系統目標
 
-設計一個清晰、直觀且具備即時反饋的審核與觸發流程，讓 Serena 可以輕鬆地完成訂單的最終確認。
+設計一個清晰、直觀且具備即時反饋的審核與觸發流程，讓團隊可以安全地完成訂單的最終確認與處理。
+
+## 🔐 安全認證
+
+系統採用 Google OAuth 2.0 認證，限制僅 @benedbiomed.com 域名的用戶可以登入，確保系統安全性。
+
+### 認證功能
+
+- ✅ Google OAuth 2.0 登入
+- ✅ 域名限制（僅 @benedbiomed.com）
+- ✅ Session 管理
+- ✅ 自動登出機制
 
 ## 🏗️ 系統架構
+
+### 雙重架構：Node.js 主體 + Google Apps Script 輔助
+
+**Node.js Web 應用程式（主要）：**
+
+- 🌐 Web 認證界面
+- 📊 訂單管理儀表板
+- 🔄 API 服務端點
+- 📈 即時統計資訊
+
+**Google Apps Script（輔助）：**
+
+- ⏰ 自動化數據同步
+- 📋 Google Sheets 整合
 
 ### 核心設計：升級的 Google Sheet
 
@@ -73,8 +98,30 @@
 # 複製環境變數範例
 cp env-example.txt .env
 
-# 編輯環境變數
+# 編輯環境變數，設定以下必要參數：
 nano .env
+```
+
+**必要環境變數：**
+
+```bash
+# Shopify API
+SHOPIFY_SHOP_NAME=your-shop-name
+SHOPIFY_ACCESS_TOKEN=your-access-token
+
+# Google Sheets API
+GOOGLE_SHEET_ID=your-sheet-id
+GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./gcp-service-account.json
+
+# FedEx API
+FEDEX_CLIENT_ID=your-client-id
+FEDEX_CLIENT_SECRET=your-client-secret
+FEDEX_ACCOUNT_NUMBER=your-account-number
+
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID=your-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-oauth-client-secret
+SESSION_SECRET=your-session-secret
 ```
 
 ### 2. 安裝依賴
@@ -86,40 +133,49 @@ npm install
 ### 3. 本地開發
 
 ```bash
-# 啟動第一步：每日自動化新增訂單
-npm start
-
-# 啟動第三步：HTTP 伺服器（用於觸發處理）
+# 啟動 Web 服務器
 npm run server
 ```
+
+然後訪問 `http://localhost:8080` 進行 Google OAuth 登入。
 
 ### 4. 部署到 Google Cloud
 
 ```bash
-# 部署 HTTP 伺服器
+# 部署 HTTP 伺服器到 Cloud Run
 chmod +x deploy-server.sh
 ./deploy-server.sh
 ```
 
 ## 📊 系統功能
 
-### API 端點
+### 🌐 Web 儀表板
 
-- `GET /health` - 健康檢查
-- `POST /api/process-approved-orders` - 處理已核准訂單
-- `GET /api/stats` - 獲取處理統計資訊
-- `POST /api/retry-failed-orders` - 重新處理失敗訂單
+訪問系統 URL 後，通過 Google OAuth 登入，您將看到：
+
+- 🔐 **安全認證**：Google OAuth 2.0 登入
+- 📊 **即時統計**：待審核、已準備、已完成、失敗訂單數量
+- 🚀 **一鍵處理**：處理已核准訂單
+- 🔄 **失敗重試**：重新處理失敗訂單
+- 📋 **訂單列表**：完整訂單清單與狀態
+- 🔗 **Google Sheet**：直接連結到原始數據
+
+### 🔌 API 端點（需要認證）
+
+- `GET /health` - 健康檢查（無需認證）
+- `GET /api/user` - 獲取用戶信息
 - `GET /api/orders` - 獲取所有訂單數據
+- `GET /api/stats` - 獲取處理統計資訊
+- `POST /api/process-approved-orders` - 處理已核准訂單
+- `POST /api/retry-failed-orders` - 重新處理失敗訂單
+- `GET /api/processed-orders` - 獲取已處理訂單（供 Google Apps Script 使用）
 
-### Web 儀表板
+### 🔒 認證與授權
 
-訪問部署後的服務 URL，您將看到一個美觀的 Web 介面，包含：
-
-- 📊 即時統計資訊
-- 🚀 一鍵處理已核准訂單
-- 🔄 重新處理失敗訂單
-- 📋 訂單列表查看
-- 🔗 直接連結到 Google Sheet
+- **Google OAuth 2.0**：安全的第三方認證
+- **域名限制**：僅允許 @benedbiomed.com 域名用戶
+- **Session 管理**：24小時有效期
+- **自動重定向**：未認證用戶自動導向登入頁面
 
 ## 🔧 技術架構
 

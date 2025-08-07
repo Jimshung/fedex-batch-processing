@@ -37,3 +37,4 @@ tmp/
 temp/ 
 # Google Service Account Key
 gcp-service-account.json
+test/fedex-api.http

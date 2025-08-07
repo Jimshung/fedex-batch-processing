@@ -247,8 +247,31 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>🚚 FedEx 訂單處理系統</h1>
-        <p>Serena 的專屬訂單審核與處理儀表板</p>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <div>
+            <h1>🚚 FedEx 訂單處理系統</h1>
+            <p>Benedbiomed 訂單審核與處理儀表板</p>
+          </div>
+          <div style="text-align: right">
+            <div id="userInfo" style="margin-bottom: 10px; opacity: 0.9"></div>
+            <a
+              href="/auth/logout"
+              style="
+                color: rgba(255, 255, 255, 0.8);
+                text-decoration: none;
+                font-size: 0.9em;
+              "
+            >
+              🚪 登出
+            </a>
+          </div>
+        </div>
       </div>
 
       <div class="content">
@@ -353,6 +376,28 @@
     <script>
       const API_BASE_URL = window.location.origin;
 
+      // 載入用戶信息
+      async function loadUserInfo() {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/user`, {
+            credentials: 'include',
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            const userInfo = document.getElementById('userInfo');
+            userInfo.innerHTML = `
+              <div style="font-size: 0.9em;">
+                👤 ${data.user.name}<br>
+                📧 ${data.user.email}
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error('載入用戶信息失敗:', error);
+        }
+      }
+
       // 顯示狀態訊息
       function showMessage(message, type = 'info') {
         const statusDiv = document.getElementById('statusMessage');
@@ -368,14 +413,16 @@
       // 載入統計資訊
       async function loadStats() {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/stats`);
+          const response = await fetch(`${API_BASE_URL}/api/stats`, {
+            credentials: 'include',
+          });
           const data = await response.json();
 
           if (data.success) {
             const stats = data.data;
             document.getElementById('totalOrders').textContent = stats.total;
             document.getElementById('pendingOrders').textContent =
-              stats.pendingReview;
+              stats.pending;
             document.getElementById('approvedOrders').textContent =
               stats.approved;
             document.getElementById('completedOrders').textContent =
@@ -391,11 +438,23 @@
       // 載入訂單列表
       async function loadOrders() {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/orders`);
+          const response = await fetch(`${API_BASE_URL}/api/orders`, {
+            credentials: 'include',
+          });
+
           const data = await response.json();
 
           if (data.success) {
-            displayOrders(data.data);
+            displayOrders(data.orders);
+          } else {
+            if (response.status === 401) {
+              showMessage('登入已過期，請重新登入', 'error');
+              setTimeout(() => {
+                window.location.href = '/auth/google';
+              }, 2000);
+            } else {
+              showMessage(data.message || '載入訂單失敗', 'error');
+            }
           }
         } catch (error) {
           console.error('載入訂單列表失敗:', error);
@@ -470,6 +529,7 @@
               headers: {
                 'Content-Type': 'application/json',
               },
+              credentials: 'include',
             }
           );
 
@@ -509,6 +569,7 @@
               headers: {
                 'Content-Type': 'application/json',
               },
+              credentials: 'include',
             }
           );
 
@@ -532,7 +593,7 @@
 
       // 重新整理數據
       async function refreshData() {
-        await Promise.all([loadStats(), loadOrders()]);
+        await Promise.all([loadUserInfo(), loadStats(), loadOrders()]);
       }
 
       // 頁面載入時初始化
