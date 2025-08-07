@@ -244,3 +244,12 @@ FEDEX_ACCOUNT_NUMBER=your-fedex-account-number
 ## 📄 授權
 
 MIT License
+
+---
+
+## 📚 進階文件
+
+- [專案實現狀態與功能清單](docs/IMPLEMENTATION_STATUS.md)
+- [專案整理與最佳實踐報告](docs/PROJECT_CLEANUP_REPORT.md)
+
+---
