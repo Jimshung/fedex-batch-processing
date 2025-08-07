@@ -28,4 +28,5 @@ COPY . .
 EXPOSE 8080
 
 # 啟動應用程式的指令
-CMD [ "npm", "start" ]
+# 預設啟動伺服器，但也可以透過環境變數來選擇啟動模式
+CMD [ "node", "src/server.js" ]

@@ -7,3 +7,5 @@ npm-debug.log
 Dockerfile
 .dockerignore
 README.md
+# 保留 Google 服務帳戶金鑰檔案
+!gcp-service-account.json

@@ -31,16 +31,20 @@ async function processOrders() {
     }
     logger.success(`篩選完成，共 ${asiaOrders.length} 筆亞洲訂單`);
 
-    // 3. 寫入 Google Sheet
-    logger.info('開始寫入 Google Sheet...');
+    // 3. 寫入 Google Sheet (只寫入新訂單，使用新的欄位結構)
+    logger.info('開始寫入新訂單至 Google Sheet...');
     const result = await googleSheetService.writeOrdersToSheet(
       asiaOrders,
       config.google.sheetId
     );
 
-    logger.success(
-      `成功寫入 ${asiaOrders.length} 筆訂單至工作表: ${result.sheetName}`
-    );
+    if (result.appendedRows) {
+      logger.success(
+        `成功追加 ${result.appendedRows} 筆新訂單至工作表: ${result.sheetName}`
+      );
+    } else {
+      logger.info(result.message || '沒有新訂單需要寫入');
+    }
     logger.success('訂單處理流程完成！');
   } catch (error) {
     logger.error(`處理訂單時發生錯誤: ${error.message}`);
