@@ -10,60 +10,59 @@
  * @param {string} addressFields.zip - 郵遞區號
  * @returns {Object} 切割後的地址，包含 address1, address2, address3
  */
+
+// (已升級) 商業邏輯 1：處理地址分行
 function splitAddress(addressFields) {
-  // 合併所有地址欄位成完整地址字串（不含城市）
-  const address = [
-    addressFields.address1 || '',
-    addressFields.address2 || '',
-    addressFields.province ? addressFields.province : '',
-    addressFields.country ? addressFields.country : '',
-    addressFields.zip ? addressFields.zip : '',
-  ]
+  if (!addressFields) {
+    return { address1: '', address2: '', address3: '' };
+  }
+
+  // 只將 address1 和 address2 合併為一個完整的地址字串（不包含 province, country, zip）
+  const fullAddress = [addressFields.address1, addressFields.address2]
     .filter(Boolean)
     .join(', ');
 
-  // 設定結果物件
-  const result = {
-    address1: '',
-    address2: '',
-    address3: '',
-  };
-
-  // 如果地址為空，直接返回空結果
-  if (!address) {
-    return result;
+  if (!fullAddress) {
+    return { address1: '', address2: '', address3: '' };
   }
 
-  // 切割地址為最多三行，每行最長35字元
-  let remainingAddress = address;
   const MAX_LENGTH = 35;
+  const addressLines = [];
+  let currentAddress = fullAddress;
 
-  // 處理第一行
-  if (remainingAddress.length <= MAX_LENGTH) {
-    result.address1 = remainingAddress;
-    return result;
-  } else {
-    // 找到最接近但不超過35字元的分割點（優先使用逗號或空格）
-    let splitPoint = findSplitPoint(remainingAddress, MAX_LENGTH);
-    result.address1 = remainingAddress.substring(0, splitPoint).trim();
-    remainingAddress = remainingAddress.substring(splitPoint).trim();
+  // 迭代處理，直到地址處理完畢或已滿三行
+  while (currentAddress.length > 0 && addressLines.length < 3) {
+    if (currentAddress.length <= MAX_LENGTH) {
+      addressLines.push(currentAddress);
+      break;
+    }
+
+    // 如果這是第三行（最後一行），直接截取前35個字元，不再分割
+    if (addressLines.length === 2) {
+      addressLines.push(currentAddress.substring(0, MAX_LENGTH).trim());
+      break;
+    }
+
+    // 從第 35 個字元往前找，尋找最後一個分隔符 (空格或逗號)
+    let splitIndex = -1;
+    for (let i = MAX_LENGTH; i >= 0; i--) {
+      if (currentAddress[i] === ' ' || currentAddress[i] === ',') {
+        splitIndex = i;
+        break;
+      }
+    }
+    if (splitIndex === -1) {
+      splitIndex = MAX_LENGTH;
+    }
+    addressLines.push(currentAddress.substring(0, splitIndex).trim());
+    currentAddress = currentAddress.substring(splitIndex + 1).trim();
   }
 
-  // 處理第二行
-  if (remainingAddress.length <= MAX_LENGTH) {
-    result.address2 = remainingAddress;
-    return result;
-  } else {
-    // 找到最接近但不超過35字元的分割點
-    let splitPoint = findSplitPoint(remainingAddress, MAX_LENGTH);
-    result.address2 = remainingAddress.substring(0, splitPoint).trim();
-    remainingAddress = remainingAddress.substring(splitPoint).trim();
-  }
-
-  // 處理第三行（剩餘的部分）
-  result.address3 = remainingAddress.substring(0, MAX_LENGTH).trim();
-
-  return result;
+  return {
+    address1: addressLines[0] || '',
+    address2: addressLines[1] || '',
+    address3: addressLines[2] || '',
+  };
 }
 
 /**

@@ -215,8 +215,6 @@ app.post(
   }
 );
 
-
-
 // 重新處理失敗的訂單
 app.post(
   '/api/retry-failed-orders',
@@ -340,7 +338,7 @@ app.get('/api/orders', requireAuth, requireBenedbiomed, async (req, res) => {
   try {
     // 直接從 Shopify 獲取未出貨訂單並篩選國家
     const allOrders = await shopifyService.getUnfulfilledOrders();
-    
+
     if (allOrders.length === 0) {
       return res.json({
         success: true,
@@ -363,7 +361,7 @@ app.get('/api/orders', requireAuth, requireBenedbiomed, async (req, res) => {
     // 動態 import camelcase-keys (ESM only)
     const camelcaseKeys = (await import('camelcase-keys')).default;
     const camelOrders = camelcaseKeys(processedOrders, { deep: true });
-    
+
     res.json({
       success: true,
       orders: camelOrders,
