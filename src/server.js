@@ -107,12 +107,102 @@ app.post(
     try {
       logger.info('收到處理已核准訂單的請求');
 
-      const result = await orderProcessingService.processApprovedOrders();
+      const orderFileService = new OrderFileService();
+      const approvedOrders = await orderFileService.getApprovedOrders();
+
+      if (approvedOrders.length === 0) {
+        return res.json({
+          success: true,
+          data: { processed: 0, succeeded: 0, failed: 0 },
+          message: '沒有已核准的訂單需要處理',
+        });
+      }
+
+      const results = [];
+      const FedExService = require('./services/fedexService');
+      const fedexService = new FedExService();
+      const documentPaths = [
+        // 在這裡放你的固定 PDF 檔案路徑
+        // './documents/commercial_invoice.pdf',
+        // './documents/customs_declaration.pdf'
+      ];
+
+      for (const order of approvedOrders) {
+        try {
+          // 更新狀態為處理中
+          await orderFileService.updateOrder(order.shopify_order_id, {
+            status: 'processing',
+            processing_status: '處理中',
+          });
+
+          // 呼叫 FedEx API
+          const shipmentResult = await fedexService.processOrderShipment(
+            order,
+            documentPaths
+          );
+
+          if (shipmentResult.success) {
+            // 出貨成功
+            await orderFileService.updateOrder(order.shopify_order_id, {
+              status: 'completed',
+              processing_status: '已完成',
+              fedex_tracking: shipmentResult.trackingNumber,
+              notes_error: '',
+              completed_at: new Date().toISOString(),
+            });
+
+            results.push({
+              orderId: order.shopify_order_id,
+              success: true,
+              trackingNumber: shipmentResult.trackingNumber,
+            });
+          } else {
+            // 出貨失敗
+            await orderFileService.updateOrder(order.shopify_order_id, {
+              status: 'failed',
+              processing_status: '失敗',
+              notes_error: shipmentResult.error || '未知錯誤',
+              failed_at: new Date().toISOString(),
+            });
+
+            results.push({
+              orderId: order.shopify_order_id,
+              success: false,
+              error: shipmentResult.error,
+            });
+          }
+        } catch (error) {
+          logger.error(
+            `處理訂單 ${order.shopify_order_id} 失敗: ${error.message}`
+          );
+
+          await orderFileService.updateOrder(order.shopify_order_id, {
+            status: 'failed',
+            processing_status: '失敗',
+            notes_error: error.message,
+            failed_at: new Date().toISOString(),
+          });
+
+          results.push({
+            orderId: order.shopify_order_id,
+            success: false,
+            error: error.message,
+          });
+        }
+      }
+
+      const succeeded = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success).length;
 
       res.json({
         success: true,
-        data: result,
-        message: `處理完成！成功: ${result.successCount}, 失敗: ${result.failedCount}`,
+        data: {
+          processed: results.length,
+          succeeded,
+          failed,
+          details: results,
+        },
+        message: `處理完成：${succeeded} 成功，${failed} 失敗`,
       });
     } catch (error) {
       logger.error(`處理已核准訂單時發生錯誤: ${error.message}`);
@@ -125,24 +215,7 @@ app.post(
   }
 );
 
-// 獲取處理統計資訊
-app.get('/api/stats', requireAuth, requireBenedbiomed, async (req, res) => {
-  try {
-    const stats = await orderProcessingService.getProcessingStats();
 
-    res.json({
-      success: true,
-      data: stats,
-    });
-  } catch (error) {
-    logger.error(`獲取統計資訊時發生錯誤: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: '獲取統計資訊時發生錯誤',
-    });
-  }
-});
 
 // 重新處理失敗的訂單
 app.post(
@@ -153,12 +226,103 @@ app.post(
     try {
       logger.info('收到重新處理失敗訂單的請求');
 
-      const result = await orderProcessingService.retryFailedOrders();
+      const orderFileService = new OrderFileService();
+      const failedOrders = await orderFileService.getFailedOrders();
+
+      if (failedOrders.length === 0) {
+        return res.json({
+          success: true,
+          data: { processed: 0, succeeded: 0, failed: 0 },
+          message: '沒有失敗的訂單需要重新處理',
+        });
+      }
+
+      const results = [];
+      const FedExService = require('./services/fedexService');
+      const fedexService = new FedExService();
+      const documentPaths = [
+        // 在這裡放你的固定 PDF 檔案路徑
+        // './documents/commercial_invoice.pdf',
+        // './documents/customs_declaration.pdf'
+      ];
+
+      for (const order of failedOrders) {
+        try {
+          // 重置狀態為處理中
+          await orderFileService.updateOrder(order.shopify_order_id, {
+            status: 'processing',
+            processing_status: '重新處理中',
+            notes_error: '',
+          });
+
+          // 呼叫 FedEx API
+          const shipmentResult = await fedexService.processOrderShipment(
+            order,
+            documentPaths
+          );
+
+          if (shipmentResult.success) {
+            // 出貨成功
+            await orderFileService.updateOrder(order.shopify_order_id, {
+              status: 'completed',
+              processing_status: '已完成',
+              fedex_tracking: shipmentResult.trackingNumber,
+              notes_error: '',
+              completed_at: new Date().toISOString(),
+            });
+
+            results.push({
+              orderId: order.shopify_order_id,
+              success: true,
+              trackingNumber: shipmentResult.trackingNumber,
+            });
+          } else {
+            // 出貨失敗
+            await orderFileService.updateOrder(order.shopify_order_id, {
+              status: 'failed',
+              processing_status: '失敗',
+              notes_error: shipmentResult.error || '未知錯誤',
+              failed_at: new Date().toISOString(),
+            });
+
+            results.push({
+              orderId: order.shopify_order_id,
+              success: false,
+              error: shipmentResult.error,
+            });
+          }
+        } catch (error) {
+          logger.error(
+            `重新處理訂單 ${order.shopify_order_id} 失敗: ${error.message}`
+          );
+
+          await orderFileService.updateOrder(order.shopify_order_id, {
+            status: 'failed',
+            processing_status: '失敗',
+            notes_error: error.message,
+            failed_at: new Date().toISOString(),
+          });
+
+          results.push({
+            orderId: order.shopify_order_id,
+            success: false,
+            error: error.message,
+          });
+        }
+      }
+
+      const succeeded = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success).length;
 
       res.json({
         success: true,
-        data: result,
-        message: result.message,
+        data: {
+          processed: results.length,
+          succeeded,
+          failed,
+          details: results,
+        },
+        message: `重新處理完成：${succeeded} 成功，${failed} 失敗`,
       });
     } catch (error) {
       logger.error(`重新處理失敗訂單時發生錯誤: ${error.message}`);
@@ -171,18 +335,39 @@ app.post(
   }
 );
 
-// 獲取所有訂單數據
+// 獲取所有訂單數據 (僅未出貨、篩選過國家)
 app.get('/api/orders', requireAuth, requireBenedbiomed, async (req, res) => {
   try {
-    const orderFileService = new OrderFileService();
-    const orders = await orderFileService.readOrders();
+    // 直接從 Shopify 獲取未出貨訂單並篩選國家
+    const allOrders = await shopifyService.getUnfulfilledOrders();
+    
+    if (allOrders.length === 0) {
+      return res.json({
+        success: true,
+        orders: [],
+        message: '目前沒有未出貨訂單',
+      });
+    }
+
+    // 篩選亞洲國家訂單
+    const filteredOrders = shopifyService.filterOrdersByCountry(
+      allOrders,
+      config.asiaCountries || []
+    );
+
+    // 處理訂單資料
+    const processedOrders = filteredOrders.map((order) =>
+      shopifyService.processOrderData(order)
+    );
+
     // 動態 import camelcase-keys (ESM only)
     const camelcaseKeys = (await import('camelcase-keys')).default;
-    const camelOrders = camelcaseKeys(orders, { deep: true });
+    const camelOrders = camelcaseKeys(processedOrders, { deep: true });
+    
     res.json({
       success: true,
       orders: camelOrders,
-      message: `成功獲取 ${camelOrders.length} 筆訂單`,
+      message: `成功獲取 ${camelOrders.length} 筆未出貨訂單`,
     });
   } catch (error) {
     logger.error(`獲取訂單數據時發生錯誤: ${error.message}`);
@@ -267,7 +452,6 @@ app.listen(PORT, () => {
   logger.info(
     `處理已核准訂單端點: POST http://localhost:${PORT}/api/process-approved-orders`
   );
-  logger.info(`獲取統計資訊端點: GET http://localhost:${PORT}/api/stats`);
   logger.info(
     `重新處理失敗訂單端點: POST http://localhost:${PORT}/api/retry-failed-orders`
   );
