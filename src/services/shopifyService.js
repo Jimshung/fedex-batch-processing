@@ -13,18 +13,19 @@ class ShopifyService {
 
   async getUnfulfilledOrders(params = {}) {
     try {
+      // 強制 fulfillment_status 為 unfulfilled，確保只抓未出貨訂單
       const response = await axios.get(`${this.baseUrl}/orders.json`, {
         headers: {
           'X-Shopify-Access-Token': config.shopify.accessToken,
           'Content-Type': 'application/json',
         },
         params: {
+          ...params,
           fulfillment_status: 'unfulfilled',
           status: 'open',
           limit: 250,
           fields:
             'id,order_number,customer,line_items,shipping_address,total_price,currency',
-          ...params,
         },
       });
       return response.data.orders || [];
@@ -136,41 +137,19 @@ class ShopifyService {
   async fetchAndProcessOrders() {
     try {
       logger.info('開始從 Shopify 獲取未出貨訂單...');
-
-      // 1. 獲取所有未出貨訂單
+      // 1. 僅獲取 fulfillment_status=unfulfilled 的訂單
       const orders = await this.getUnfulfilledOrders();
-
       if (orders.length === 0) {
         logger.info('目前沒有未出貨訂單');
         return [];
       }
-
       logger.success(`成功獲取 ${orders.length} 筆未出貨訂單`);
-
-      // 2. 篩選亞洲國家訂單
-      const asiaOrders = this.filterOrdersByCountry(
-        orders,
-        config.asiaCountries
-      );
-
-      if (asiaOrders.length === 0) {
-        logger.info('沒有符合亞洲國家條件的訂單');
-        return [];
-      }
-
-      logger.success(`篩選完成，共 ${asiaOrders.length} 筆亞洲訂單`);
-
-      // 3. 處理訂單資料
-      const processedOrders = asiaOrders.map((order) =>
+      // 2. 處理訂單資料（可依需求篩選國家）
+      const processedOrders = orders.map((order) =>
         this.processOrderData(order)
       );
-
-      // 4. 將處理好的訂單存入 orders.json
-      const addedCount =
-        await this.orderFileService.updateOrders(processedOrders);
-
-      logger.success(`成功更新訂單資料，新增了 ${addedCount} 筆新訂單`);
-
+      // 將處理後的訂單更新至本地文件
+      await this.orderFileService.updateOrders(processedOrders);
       return processedOrders;
     } catch (error) {
       logger.error(`取得並處理訂單時發生錯誤: ${error.message}`);

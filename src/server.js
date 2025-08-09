@@ -3,8 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
-const orderProcessingService = require('./services/orderProcessingService');
-const googleSheetService = require('./services/googleSheetService');
+const OrderFileService = require('./services/orderFileService');
+const shopifyService = require('./services/shopifyService');
 const logger = require('./utils/logger');
 const config = require('./config/config');
 const {
@@ -174,99 +174,24 @@ app.post(
 // 獲取所有訂單數據
 app.get('/api/orders', requireAuth, requireBenedbiomed, async (req, res) => {
   try {
-    const orders = await googleSheetService.readAllOrders(
-      config.google.sheetId
-    );
-
+    const orderFileService = new OrderFileService();
+    const orders = await orderFileService.readOrders();
+    // 動態 import camelcase-keys (ESM only)
+    const camelcaseKeys = (await import('camelcase-keys')).default;
+    const camelOrders = camelcaseKeys(orders, { deep: true });
     res.json({
       success: true,
-      orders: orders,
-      message: `成功獲取 ${orders.length} 筆訂單`,
+      orders: camelOrders,
+      message: `成功獲取 ${camelOrders.length} 筆訂單`,
     });
   } catch (error) {
     logger.error(`獲取訂單數據時發生錯誤: ${error.message}`);
     res.status(500).json({
       success: false,
-      error: error.message,
-      message: '獲取訂單數據時發生錯誤',
+      message: '獲取訂單數據失敗',
     });
   }
 });
-
-// 新增：獲取處理過的訂單數據（供 Google Apps Script 使用）
-app.get(
-  '/api/processed-orders',
-  requireAuth,
-  requireBenedbiomed,
-  async (req, res) => {
-    try {
-      logger.info('收到獲取處理過訂單的請求');
-
-      // 從 Shopify 獲取未出貨訂單
-      const shopifyService = require('./services/shopifyService');
-      const allOrders = await shopifyService.getUnfulfilledOrders();
-
-      if (allOrders.length === 0) {
-        res.json({
-          success: true,
-          orders: [],
-          message: '目前沒有未出貨訂單',
-        });
-        return;
-      }
-
-      // 篩選亞洲國家訂單
-      const asiaOrders = shopifyService.filterOrdersByCountry(
-        allOrders,
-        config.asiaCountries
-      );
-
-      if (asiaOrders.length === 0) {
-        res.json({
-          success: true,
-          orders: [],
-          message: '沒有符合亞洲國家條件的訂單',
-        });
-        return;
-      }
-
-      // 轉換為 Google Apps Script 需要的格式
-      const processedOrders = asiaOrders.map((order) => {
-        const shippingAddress = order.shipping_address || {};
-        const customer = order.customer || {};
-
-        return {
-          id: order.id?.toString() || '',
-          order_number: order.order_number?.toString() || '',
-          customer_name:
-            `${customer.first_name || ''} ${customer.last_name || ''}`.trim() ||
-            '未知客戶',
-          processed_address1: shippingAddress.address1 || '',
-          processed_address2: shippingAddress.address2 || '',
-          original_address1: shippingAddress.address1 || '',
-          original_address2: shippingAddress.address2 || '',
-          total_price: order.total_price || '',
-          currency: order.currency || '',
-          line_items: order.line_items || [],
-          status: order.fulfillment_status || 'unfulfilled',
-        };
-      });
-
-      res.json({
-        success: true,
-        orders: processedOrders,
-        message: `成功獲取 ${processedOrders.length} 筆亞洲訂單`,
-      });
-    } catch (error) {
-      logger.error(`獲取處理過訂單時發生錯誤: ${error.message}`);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-        message: '獲取處理過訂單時發生錯誤',
-      });
-    }
-  }
-);
 
 // 錯誤處理中間件
 app.use((error, req, res, next) => {
@@ -310,6 +235,31 @@ app.use((req, res) => {
   }
 });
 
+// 新增同步訂單端點
+app.post(
+  '/api/sync-orders',
+  requireAuth,
+  requireBenedbiomed,
+  async (req, res) => {
+    try {
+      logger.info('收到同步訂單請求');
+
+      await shopifyService.fetchAndProcessOrders();
+      res.json({
+        success: true,
+        message: '訂單同步完成，已更新本地 orders.json',
+      });
+    } catch (error) {
+      logger.error(`同步訂單時發生錯誤: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: '同步訂單失敗',
+      });
+    }
+  }
+);
+
 // 啟動伺服器
 app.listen(PORT, () => {
   logger.success(`伺服器已啟動，監聽端口: ${PORT}`);
@@ -322,6 +272,7 @@ app.listen(PORT, () => {
     `重新處理失敗訂單端點: POST http://localhost:${PORT}/api/retry-failed-orders`
   );
   logger.info(`獲取所有訂單端點: GET http://localhost:${PORT}/api/orders`);
+  logger.info(`同步訂單端點: POST http://localhost:${PORT}/api/sync-orders`);
 });
 
 module.exports = app;

@@ -43,39 +43,43 @@ class OrderFileService {
   }
 
   /**
-   * 新增或更新訂單資料
-   * @param {Array} newOrders 新訂單資料陣列
-   * @returns {Promise<number>} 新增的訂單數量
+   * 覆蓋 orders.json，僅保留最新未出貨訂單
+   * @param {Array} newOrders Shopify 未出貨訂單陣列
+   * @returns {Promise<number>} 寫入的訂單數量
    */
   async updateOrders(newOrders) {
     try {
-      // 讀取現有訂單
-      const existingOrders = await this.readOrders();
-      const existingOrderIds = new Set(
-        existingOrders.map((order) => order.shopify_order_id.toString())
-      );
-
-      // 篩選出新訂單
-      const ordersToAdd = newOrders.filter(
-        (order) => !existingOrderIds.has(order.shopify_order_id.toString())
-      );
-
-      if (ordersToAdd.length === 0) {
-        logger.info('沒有新訂單需要新增');
-        return 0;
-      }
-
-      // 合併新舊訂單
-      const updatedOrders = [...existingOrders, ...ordersToAdd];
-
-      // 寫入更新後的訂單資料
-      await this.writeOrders(updatedOrders);
-      return ordersToAdd.length;
+      // 直接覆蓋 orders.json，僅保留最新未出貨訂單
+      await this.writeOrders(newOrders);
+      logger.info('已覆蓋 orders.json，僅保留最新未出貨訂單');
+      return newOrders.length;
     } catch (error) {
       logger.error(`更新訂單資料失敗: ${error.message}`);
       throw error;
     }
   }
+
+  /**
+   * [備註] 合併同步邏輯範例（如需保留本地狀態時可參考）
+   *
+   * // async updateOrders(newOrders) {
+   * //   const existingOrders = await this.readOrders();
+   * //   const existingMap = new Map(existingOrders.map(o => [o.shopify_order_id.toString(), o]));
+   * //   const merged = newOrders.map(order => {
+   * //     const old = existingMap.get(order.shopify_order_id.toString());
+   * //     return old ? { ...order, ...pickLocalFields(old) } : order;
+   * //   });
+   * //   await this.writeOrders(merged);
+   * //   return merged.length;
+   * // }
+   * // function pickLocalFields(order) {
+   * //   return {
+   * //     fedex_tracking: order.fedex_tracking,
+   * //     notes: order.notes,
+   * //     ... // 其他本地欄位
+   * //   };
+   * // }
+   */
 
   /**
    * 更新單一訂單的資料
