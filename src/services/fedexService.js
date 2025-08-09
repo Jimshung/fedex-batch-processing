@@ -1,5 +1,8 @@
 // fedexService.js - FedEx API 相關服務
 const axios = require('axios');
+const fs = require('fs').promises;
+const FormData = require('form-data');
+const path = require('path');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 
@@ -45,10 +48,144 @@ class FedExService {
     }
   }
 
-  async createShipment(orderData) {
+  /**
+   * 上傳電子貿易文件 (ETD)
+   * @param {string[]} documentPaths 文件路徑陣列
+   * @returns {Promise<Object>} 上傳結果
+   */
+  async uploadEtdDocuments(documentPaths) {
+    try {
+      // 模擬模式 - 直接返回模擬的文件參考號
+      logger.info(`模擬上傳 ETD 文件`);
+
+      // 模擬 API 延遲
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // 產生隨機參考號
+      const documentReferenceNumber =
+        'DOC' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+      logger.success(
+        `模擬成功上傳 ETD 文件，參考號: ${documentReferenceNumber}`
+      );
+
+      return {
+        success: true,
+        documentReferenceNumber,
+        error: null,
+      };
+
+      /* 真實 API 呼叫（已註解）
+      const accessToken = await this.getAccessToken();
+      
+      // 建立 FormData 物件
+      const formData = new FormData();
+      
+      // 加入必要的請求參數
+      formData.append('meta', JSON.stringify({
+        etdType: 'COMMERCIAL_INVOICE',
+        uploaderId: config.fedex.accountNumber,
+        shipTimestamp: new Date().toISOString(),
+        documentType: 'COMMERCIAL_INVOICE'
+      }));
+      
+      // 加入文件
+      for (const documentPath of documentPaths) {
+        const fileContent = await fs.readFile(documentPath);
+        const fileName = path.basename(documentPath);
+        formData.append('documents', fileContent, {
+          filename: fileName,
+          contentType: 'application/pdf',
+        });
+      }
+      
+      // 發送請求
+      const response = await axios.post(
+        `${this.baseUrl}/documents/v1/etds/upload`,
+        formData,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            ...formData.getHeaders(),
+          },
+        }
+      );
+      
+      // 取得文件參考號
+      const documentReferenceNumber = response.data.output?.uploadId;
+      
+      logger.success(`成功上傳 ETD 文件，參考號: ${documentReferenceNumber}`);
+      
+      return {
+        success: true,
+        documentReferenceNumber,
+        error: null,
+      };
+      */
+    } catch (error) {
+      const errorMessage = this.extractErrorMessage(error);
+      logger.error(`上傳 ETD 文件失敗: ${errorMessage}`);
+
+      return {
+        success: false,
+        documentReferenceNumber: null,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * 處理訂單出貨
+   * @param {Object} orderData 訂單資料
+   * @param {string[]} documentPaths 文件路徑陣列
+   * @returns {Promise<Object>} 出貨結果
+   */
+  async processOrderShipment(orderData, documentPaths = []) {
+    try {
+      logger.info(`處理訂單出貨，訂單號: ${orderData.order_number}`);
+
+      // 1. 上傳電子貿易文件
+      let documentReference = null;
+      if (documentPaths && documentPaths.length > 0) {
+        const uploadResult = await this.uploadEtdDocuments(documentPaths);
+        if (uploadResult.success) {
+          documentReference = uploadResult.documentReferenceNumber;
+        } else {
+          logger.warning(`上傳文件失敗，將繼續處理出貨: ${uploadResult.error}`);
+        }
+      }
+
+      // 2. 創建貨運請求
+      const shipmentResult = await this.createShipment(
+        orderData,
+        documentReference
+      );
+      return shipmentResult;
+    } catch (error) {
+      const errorMessage = this.extractErrorMessage(error);
+      logger.error(
+        `處理訂單出貨失敗，訂單號: ${orderData.order_number}, 錯誤: ${errorMessage}`
+      );
+
+      return {
+        success: false,
+        trackingNumber: null,
+        labelUrl: null,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * 創建貨運標籤
+   * @param {Object} orderData 訂單資料
+   * @param {string} documentReferenceNumber 文件參考號
+   * @returns {Promise<Object>} 創建結果
+   */
+  async createShipment(orderData, documentReferenceNumber = null) {
     try {
       // 模擬模式 - 不呼叫真實的 FedEx API
-      logger.info(`模擬 FedEx API 呼叫，訂單編號: ${orderData.orderNumber}`);
+      logger.info(`模擬 FedEx API 呼叫，訂單編號: ${orderData.order_number}`);
 
       // 模擬 API 延遲
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -61,7 +198,7 @@ class FedExService {
           'FX' + Math.random().toString(36).substr(2, 9).toUpperCase();
 
         logger.success(
-          `模擬成功建立 FedEx 貨運標籤，訂單編號: ${orderData.orderNumber}, 追蹤號碼: ${trackingNumber}`
+          `模擬成功建立 FedEx 貨運標籤，訂單編號: ${orderData.order_number}, 追蹤號碼: ${trackingNumber}`
         );
 
         return {
@@ -82,7 +219,7 @@ class FedExService {
         const errorMessage = errors[Math.floor(Math.random() * errors.length)];
 
         logger.error(
-          `模擬 FedEx API 呼叫失敗，訂單編號: ${orderData.orderNumber}, 錯誤: ${errorMessage}`
+          `模擬 FedEx API 呼叫失敗，訂單編號: ${orderData.order_number}, 錯誤: ${errorMessage}`
         );
 
         return {
@@ -97,7 +234,7 @@ class FedExService {
       const accessToken = await this.getAccessToken();
 
       // 準備 FedEx API 請求數據
-      const shipmentRequest = this.prepareShipmentRequest(orderData);
+      const shipmentRequest = this.prepareShipmentRequest(orderData, documentReferenceNumber);
 
       const response = await axios.post(
         `${this.baseUrl}/ship/v1/shipments`,
@@ -112,7 +249,7 @@ class FedExService {
       );
 
       logger.success(
-        `成功建立 FedEx 貨運標籤，訂單編號: ${orderData.orderNumber}`
+        `成功建立 FedEx 貨運標籤，訂單編號: ${orderData.order_number}`
       );
 
       return {
@@ -126,7 +263,7 @@ class FedExService {
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
       logger.error(
-        `FedEx API 呼叫失敗，訂單編號: ${orderData.orderNumber}, 錯誤: ${errorMessage}`
+        `FedEx API 呼叫失敗，訂單編號: ${orderData.order_number}, 錯誤: ${errorMessage}`
       );
 
       return {
@@ -138,61 +275,106 @@ class FedExService {
     }
   }
 
-  prepareShipmentRequest(orderData) {
+  /**
+   * 準備貨運請求數據
+   * @param {Object} orderData 訂單資料
+   * @param {string} documentReferenceNumber 文件參考號
+   * @returns {Object} 貨運請求數據
+   */
+  prepareShipmentRequest(orderData, documentReferenceNumber = null) {
     // 解析地址資訊
-    const address1 =
-      orderData.processedAddress1 || orderData.originalAddress1 || '';
-    const address2 =
-      orderData.processedAddress2 || orderData.originalAddress2 || '';
+    const streetLines = [
+      orderData.processed_address_1,
+      orderData.processed_address_2,
+      orderData.processed_address_3,
+    ].filter((line) => line && line.trim().length > 0);
 
-    // 解析商品明細
-    const lineItems = Array.isArray(orderData.lineItems) ? orderItems : [];
+    // 確定收件國家代碼
+    const countryCode = orderData.country_code || 'SG';
 
-    return {
+    // 計算商品重量 (假設每瓶 Neuralli MP 重量為 0.5 磅)
+    let totalWeight = 0.5; // 至少 0.5 磅
+    if (Array.isArray(orderData.items)) {
+      totalWeight = Math.max(
+        0.5,
+        orderData.items.reduce((sum, item) => {
+          return sum + (item.quantity || 1) * 0.5; // 每瓶 0.5 磅
+        }, 0)
+      );
+    }
+
+    // 建構出貨請求
+    const requestData = {
       requestedShipment: {
         shipper: {
           contact: {
-            personName: 'Your Company Name',
-            phoneNumber: '1234567890',
-            emailAddress: 'shipper@example.com',
+            personName: 'Benedbiomed Singapore',
+            phoneNumber: '6512345678',
+            emailAddress: 'shipping@benedbiomed.com',
           },
           address: {
-            streetLines: ['123 Main St'],
-            city: 'Your City',
-            stateOrProvinceCode: 'CA',
-            postalCode: '12345',
-            countryCode: 'US',
+            streetLines: ['1 Harbourfront Avenue', '#03-01 Keppel Bay Tower'],
+            city: 'Singapore',
+            postalCode: '098632',
+            countryCode: 'SG',
           },
         },
-        recipient: {
-          contact: {
-            personName: orderData.customerName,
-            phoneNumber: '1234567890',
-            emailAddress: 'recipient@example.com',
+        recipients: [
+          {
+            contact: {
+              personName: orderData.customer_name,
+              phoneNumber: '1234567890', // 理想情況下應從訂單取得電話
+              emailAddress: 'recipient@example.com', // 理想情況下應從訂單取得郵箱
+            },
+            address: {
+              streetLines,
+              countryCode,
+            },
           },
-          address: {
-            streetLines: [address1, address2].filter((addr) => addr),
-            city: 'Recipient City', // 這裡需要從地址中解析或從其他欄位獲取
-            stateOrProvinceCode: 'CA', // 這裡需要從地址中解析
-            postalCode: '12345', // 這裡需要從地址中解析
-            countryCode: 'US', // 這裡需要根據國家代碼設定
-          },
-        },
+        ],
         shipDatestamp: new Date().toISOString().split('T')[0],
-        serviceType: 'PRIORITY_OVERNIGHT',
+        serviceType: 'INTERNATIONAL_PRIORITY', // 國際優先
         packagingType: 'YOUR_PACKAGING',
         pickupType: 'DROPOFF_AT_FEDEX_LOCATION',
-        rateRequestType: ['LIST'],
+        blockInsightVisibility: false,
+        shippingChargesPayment: {
+          paymentType: 'SENDER',
+        },
+        labelSpecification: {
+          imageType: 'PDF',
+          labelStockType: 'PAPER_85X11_TOP_HALF_LABEL',
+        },
+        customsClearanceDetail: {
+          dutiesPayment: {
+            paymentType: 'SENDER',
+          },
+          commodities: [
+            {
+              description: 'Neuralli MP',
+              countryOfManufacture: 'US',
+              quantity: 1,
+              quantityUnits: 'PCS',
+              unitPrice: {
+                amount: orderData.customs_value || 28,
+                currency: 'USD',
+              },
+              weight: {
+                units: 'LB',
+                value: totalWeight,
+              },
+            },
+          ],
+        },
         requestedPackageLineItems: [
           {
             weight: {
               units: 'LB',
-              value: 1.0,
+              value: totalWeight,
             },
             dimensions: {
-              length: 10,
-              width: 10,
-              height: 10,
+              length: 8,
+              width: 6,
+              height: 4,
               units: 'IN',
             },
           },
@@ -202,6 +384,23 @@ class FedExService {
         value: config.fedex.accountNumber,
       },
     };
+
+    // 如果有文件參考號，加入電子貿易文件資訊
+    if (documentReferenceNumber) {
+      requestData.requestedShipment.customsClearanceDetail.documentContent =
+        'ELECTRONIC_TRADE_DOCUMENTS';
+      requestData.requestedShipment.customsClearanceDetail.etdDetail = {
+        requestedDocumentTypes: ['COMMERCIAL_INVOICE'],
+        documentReferences: [
+          {
+            documentType: 'COMMERCIAL_INVOICE',
+            documentReference: documentReferenceNumber,
+          },
+        ],
+      };
+    }
+
+    return requestData;
   }
 
   extractErrorMessage(error) {

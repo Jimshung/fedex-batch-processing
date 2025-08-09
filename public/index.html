@@ -163,15 +163,29 @@
         margin-top: 20px;
         background: white;
         border-radius: 8px;
-        overflow: hidden;
+        overflow-x: auto;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        font-size: 0.9em;
+      }
+
+      .orders-table-container {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 20px;
       }
 
       .orders-table th,
       .orders-table td {
-        padding: 12px;
+        padding: 10px;
         text-align: left;
         border-bottom: 1px solid #eee;
+        white-space: normal;
+        vertical-align: top;
+      }
+
+      .orders-table td.address-cell {
+        max-width: 200px;
+        word-break: break-word;
       }
 
       .orders-table th {
@@ -331,13 +345,6 @@
           <button class="btn btn-success" onclick="refreshData()">
             <span>📊 重新整理數據</span>
           </button>
-          <a
-            href="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID"
-            target="_blank"
-            class="btn btn-secondary"
-          >
-            📋 開啟 Google Sheet
-          </a>
         </div>
 
         <!-- 訂單列表 -->
@@ -346,29 +353,34 @@
             📋 訂單列表
             <button class="refresh-btn" onclick="refreshData()">🔄</button>
           </h3>
-          <table class="orders-table" id="ordersTable">
-            <thead>
-              <tr>
-                <th>核准</th>
-                <th>處理狀態</th>
-                <th>訂單編號</th>
-                <th>客戶名稱</th>
-                <th>總金額</th>
-                <th>FedEx 追蹤號碼</th>
-                <th>備註/錯誤訊息</th>
-              </tr>
-            </thead>
-            <tbody id="ordersTableBody">
-              <tr>
-                <td
-                  colspan="7"
-                  style="text-align: center; padding: 40px; color: #666"
-                >
-                  載入中...
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="orders-table-container">
+            <table class="orders-table" id="ordersTable">
+              <thead>
+                <tr>
+                  <th>核准</th>
+                  <th>處理狀態</th>
+                  <th>訂單編號</th>
+                  <th>客戶名稱</th>
+                  <th>原始金額</th>
+                  <th>報關金額</th>
+                  <th>原始地址</th>
+                  <th>處理後地址</th>
+                  <th>FedEx 追蹤號碼</th>
+                  <th>備註/錯誤訊息</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr>
+                  <td
+                    colspan="10"
+                    style="text-align: center; padding: 40px; color: #666"
+                  >
+                    載入中...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -445,6 +457,11 @@
           const data = await response.json();
 
           if (data.success) {
+            // 添加調試輸出，檢查訂單數據結構
+            console.log('訂單數據:', data.orders);
+            if (data.orders.length > 0) {
+              console.log('訂單樣本:', data.orders[0]);
+            }
             displayOrders(data.orders);
           } else {
             if (response.status === 401) {
@@ -468,7 +485,7 @@
 
         if (orders.length === 0) {
           tbody.innerHTML =
-            '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #666;">沒有訂單數據</td></tr>';
+            '<tr><td colspan="10" style="text-align: center; padding: 40px; color: #666;">沒有訂單數據</td></tr>';
           return;
         }
 
@@ -477,28 +494,119 @@
             (order) => `
                 <tr>
                     <td>
-                        <input type="checkbox" ${order.approve ? 'checked' : ''} disabled>
+                        <input type="checkbox" ${order.approve || order.status === 'approved' ? 'checked' : ''} disabled>
                     </td>
                     <td>
-                        <span class="status-badge status-${getStatusClass(order.processingStatus)}">
-                            ${order.processingStatus}
+                        <span class="status-badge status-${getStatusClass(order.processingStatus || mapStatus(order.status))}">
+                            ${order.processingStatus || mapStatus(order.status) || '待審核'}
                         </span>
                     </td>
                     <td>${order.orderNumber}</td>
                     <td>${order.customerName}</td>
-                    <td>${order.totalPrice} ${order.currency}</td>
+                    <td>${order.originalTotalPrice || order.totalPrice} ${order.currency || 'USD'}</td>
+                    <td><strong>${order.customsValue ? order.customsValue + ' USD' : order.totalPrice + ' USD'}</strong></td>
+                    <td class="address-cell">${formatOriginalAddress(order)}</td>
+                    <td class="address-cell">${formatProcessedAddress(order)}</td>
                     <td>${order.fedexTracking || '-'}</td>
-                    <td>${order.notesError || '-'}</td>
+                    <td>${order.notesError || order.notes || '-'}</td>
                 </tr>
             `
           )
           .join('');
       }
 
+      // 格式化原始地址
+      function formatOriginalAddress(order) {
+        let address = '';
+        // 適應駝峰式命名 (camelCase)
+        if (order.originalAddress1) {
+          address += order.originalAddress1;
+        } else if (order.originalAddressOne || order.originalAddress_1) {
+          // 備用屬性名
+          address += order.originalAddressOne || order.originalAddress_1;
+        }
+
+        if (order.originalAddress2) {
+          address += address
+            ? '<br>' + order.originalAddress2
+            : order.originalAddress2;
+        } else if (order.originalAddressTwo || order.originalAddress_2) {
+          // 備用屬性名
+          address += address
+            ? '<br>' + (order.originalAddressTwo || order.originalAddress_2)
+            : order.originalAddressTwo || order.originalAddress_2;
+        }
+        return address || '-';
+      }
+
+      // 格式化處理後的地址 - 顯示分割後的三行
+      function formatProcessedAddress(order) {
+        let addressLines = [];
+
+        // 檢查各種可能的屬性名
+        const addr1 =
+          order.processedAddress1 ||
+          order.processedAddressOne ||
+          order.processedAddress_1 ||
+          '';
+        const addr2 =
+          order.processedAddress2 ||
+          order.processedAddressTwo ||
+          order.processedAddress_2 ||
+          '';
+        const addr3 =
+          order.processedAddress3 ||
+          order.processedAddressThree ||
+          order.processedAddress_3 ||
+          '';
+
+        if (addr1) {
+          addressLines.push(
+            `<div style="margin-bottom: 3px; font-size: 0.9em;"><strong>第1行:</strong> ${addr1}</div>`
+          );
+        }
+        if (addr2) {
+          addressLines.push(
+            `<div style="margin-bottom: 3px; font-size: 0.9em;"><strong>第2行:</strong> ${addr2}</div>`
+          );
+        }
+        if (addr3) {
+          addressLines.push(
+            `<div style="margin-bottom: 3px; font-size: 0.9em;"><strong>第3行:</strong> ${addr3}</div>`
+          );
+        }
+
+        return addressLines.length > 0 ? addressLines.join('') : '-';
+      }
+
+      // 將訂單狀態映射為顯示文字
+      function mapStatus(status) {
+        if (!status) return '待審核';
+
+        switch (status.toLowerCase()) {
+          case 'pending_review':
+            return '待審核';
+          case 'approved':
+            return '已核准';
+          case 'processing':
+            return '處理中';
+          case 'completed':
+            return '已完成';
+          case 'failed':
+            return '失敗';
+          default:
+            return status;
+        }
+      }
+
       // 取得狀態 CSS 類別
       function getStatusClass(status) {
+        if (!status) return 'pending';
+
         switch (status) {
           case '待審核':
+            return 'pending';
+          case '已核准':
             return 'pending';
           case '處理中':
             return 'processing';

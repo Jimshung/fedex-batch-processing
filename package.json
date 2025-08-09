@@ -11,14 +11,17 @@
     "check-config": "node scripts/check-config.js",
     "create-script": "node scripts/create-google-apps-script.js",
     "lint": "eslint src/",
-    "format": "prettier --write src/**/*.js"
+    "format": "prettier --write src/**/*.js",
+    "sync-orders": "node scripts/sync-shopify-orders.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
+    "camelcase-keys": "^8.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.18.2",
+    "form-data": "^4.0.0",
     "google-auth-library": "^8.9.0",
     "googleapis": "^128.0.0",
     "passport": "^0.7.0",
