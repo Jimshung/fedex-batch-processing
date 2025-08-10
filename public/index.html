@@ -373,6 +373,10 @@
 
       // 載入訂單列表
       async function loadOrders() {
+        const tbody = document.getElementById('ordersTableBody');
+        // 加入簡單 loading 效果
+        tbody.innerHTML =
+          '<tr><td colspan="10" style="text-align: center; padding: 40px; color: #667eea;">🔄 載入中...</td></tr>';
         try {
           const response = await fetch(`${API_BASE_URL}/api/orders`, {
             credentials: 'include',
@@ -416,15 +420,15 @@
         tbody.innerHTML = orders
           .map(
             (order) => `
-                <tr>
-                    <td>
+        <tr>
+          <td>
                         <input type="checkbox" ${order.approve || order.status === 'approved' ? 'checked' : ''} disabled>
-                    </td>
-                    <td>
-                        <span class="status-badge status-${getStatusClass(order.processingStatus || mapStatus(order.status))}">
-                            ${order.processingStatus || mapStatus(order.status) || '待審核'}
-                        </span>
-                    </td>
+          </td>
+          <td>
+            <span class="status-badge status-${getStatusClass(order.processingStatus || mapStatus(order.status))}">
+              ${order.processingStatus || mapStatus(order.status) || '待審核'}
+            </span>
+          </td>
                     <td>${order.orderNumber}</td>
                     <td>${order.customerName}</td>
                     <td>${order.originalTotalPrice || order.totalPrice} ${order.currency || 'USD'}</td>
@@ -631,9 +635,6 @@
       // 頁面載入時初始化
       document.addEventListener('DOMContentLoaded', function () {
         refreshData();
-
-        // 每 30 秒自動重新整理
-        setInterval(refreshData, 30000);
       });
     </script>
   </body>
