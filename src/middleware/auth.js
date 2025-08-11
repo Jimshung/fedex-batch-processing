@@ -9,7 +9,17 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback',
+      // 動態設定 callback URL，生產環境會自動使用正確的網域
+      callbackURL:
+        process.env.NODE_ENV === 'production'
+          ? '/auth/google/callback' // Cloud Run 會自動處理網域
+          : process.env.GOOGLE_CALLBACK_URL ||
+            'http://localhost:8080/auth/google/callback',
+      
+      // 【關鍵修改】
+      // 告訴 Passport 的 Google 策略，要信任代理伺服器提供的協定 (https)。
+      // 這會確保它產生的 redirect_uri 是以 https:// 開頭。
+      proxy: true,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {

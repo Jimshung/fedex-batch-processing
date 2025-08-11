@@ -14,7 +14,12 @@ const {
 } = require('./middleware/auth');
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8080; // Cloud Run 會自動設定 PORT 環境變數
+
+// 【關鍵修改】
+// 告訴 Express.js 應用程式，它正運行在一個反向代理後面。
+// 這將允許 req.protocol 正確地回傳 'https'。
+app.set('trust proxy', 1);
 
 // Session 配置
 app.use(
@@ -26,6 +31,8 @@ app.use(
       secure: process.env.NODE_ENV === 'production', // HTTPS only in production
       maxAge: 24 * 60 * 60 * 1000, // 24 小時
     },
+    // 【建議新增】確保 session cookie 能在代理後正常運作
+    proxy: true,
   })
 );
 
@@ -46,6 +53,29 @@ app.use(express.static('public'));
 // 健康檢查端點（無需認證）
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// 簡單測試端點（無需認證）
+app.get('/test', (req, res) => {
+  res.json({
+    message: 'Test endpoint working',
+    env: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 調試端點（無需認證）
+app.get('/debug', (req, res) => {
+  res.json({
+    status: 'debug',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+    authenticated: req.isAuthenticated
+      ? req.isAuthenticated()
+      : 'function not available',
+    user: req.user || null,
+    sessionID: req.sessionID || 'no session',
+  });
 });
 
 // Google OAuth 路由
@@ -106,15 +136,27 @@ app.post(
   async (req, res) => {
     try {
       logger.info('收到處理已核准訂單的請求');
+      const { orderIds } = req.body;
+      logger.log('🚀 ~ orderIds:', orderIds);
 
       const orderFileService = new OrderFileService();
-      const approvedOrders = await orderFileService.getApprovedOrders();
+      let approvedOrders = await orderFileService.getApprovedOrders();
+
+      // 如果有傳入特定訂單ID，則過濾出這些訂單
+      if (orderIds && orderIds.length > 0) {
+        approvedOrders = approvedOrders.filter((order) =>
+          orderIds.includes(order.orderNumber)
+        );
+      }
 
       if (approvedOrders.length === 0) {
         return res.json({
           success: true,
           data: { processed: 0, succeeded: 0, failed: 0 },
-          message: '沒有已核准的訂單需要處理',
+          message:
+            orderIds && orderIds.length > 0
+              ? '沒有找到符合的已核准訂單'
+              : '沒有已核准的訂單需要處理',
         });
       }
 
@@ -336,25 +378,19 @@ app.post(
 // 獲取所有訂單數據 (僅未出貨、篩選過國家)
 app.get('/api/orders', requireAuth, requireBenedbiomed, async (req, res) => {
   try {
-    // 直接從 Shopify 獲取未出貨訂單並篩選國家
+    // 直接從 Shopify 獲取未出貨訂單（已在 shopifyService 中過濾亞洲國家）
     const allOrders = await shopifyService.getUnfulfilledOrders();
 
     if (allOrders.length === 0) {
       return res.json({
         success: true,
         orders: [],
-        message: '目前沒有未出貨訂單',
+        message: '目前沒有亞洲地區的未出貨訂單',
       });
     }
 
-    // 篩選亞洲國家訂單
-    const filteredOrders = shopifyService.filterOrdersByCountry(
-      allOrders,
-      config.asiaCountries || []
-    );
-
-    // 處理訂單資料
-    const processedOrders = filteredOrders.map((order) =>
+    // 處理訂單資料（不需要再次過濾國家，因為 shopifyService 已經過濾了）
+    const processedOrders = allOrders.map((order) =>
       shopifyService.processOrderData(order)
     );
 
@@ -365,7 +401,7 @@ app.get('/api/orders', requireAuth, requireBenedbiomed, async (req, res) => {
     res.json({
       success: true,
       orders: camelOrders,
-      message: `成功獲取 ${camelOrders.length} 筆未出貨訂單`,
+      message: `成功獲取 ${camelOrders.length} 筆亞洲地區未出貨訂單`,
     });
   } catch (error) {
     logger.error(`獲取訂單數據時發生錯誤: ${error.message}`);
@@ -386,13 +422,17 @@ app.use((error, req, res, next) => {
   });
 });
 
-// 根路徑重定向
+// 根路徑重定向（暫時移除認證）
 app.get('/', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.redirect('/dashboard');
-  } else {
-    res.sendFile(path.join(__dirname, '../public/login.html'));
-  }
+  res.json({
+    message: 'FedEx Order Processor API',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      test: '/test',
+      login: '/auth/google',
+    },
+  });
 });
 
 // 儀表板頁面（需要認證）

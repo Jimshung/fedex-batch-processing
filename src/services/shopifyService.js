@@ -13,23 +13,80 @@ class ShopifyService {
 
   async getUnfulfilledOrders(params = {}) {
     try {
-      // 強制 fulfillment_status 為 unfulfilled，確保只抓未出貨訂單
-      const response = await axios.get(`${this.baseUrl}/orders.json`, {
-        headers: {
-          'X-Shopify-Access-Token': config.shopify.accessToken,
-          'Content-Type': 'application/json',
-        },
-        params: {
-          ...params,
-          fulfillment_status: 'unfulfilled',
-          status: 'open',
-          limit: 250,
-          fields:
-            'id,order_number,customer,line_items,shipping_address,total_price,currency',
-        },
+      let allOrders = [];
+      let nextPageUrl = null;
+      let isFirstRequest = true;
+
+      // 使用分頁機制取得所有未出貨訂單
+      while (isFirstRequest || nextPageUrl) {
+        let requestUrl;
+        const requestConfig = {
+          headers: {
+            'X-Shopify-Access-Token': config.shopify.accessToken,
+            'Content-Type': 'application/json',
+          },
+        };
+
+        if (isFirstRequest) {
+          // 第一次請求
+          requestUrl = `${this.baseUrl}/orders.json`;
+          requestConfig.params = {
+            ...params,
+            fulfillment_status: 'unfulfilled',
+            status: 'open',
+            limit: 250,
+            fields:
+              'id,order_number,customer,line_items,shipping_address,total_price,currency',
+          };
+          isFirstRequest = false;
+        } else {
+          // 後續分頁請求
+          requestUrl = nextPageUrl;
+        }
+
+        const response = await axios.get(requestUrl, requestConfig);
+        const orders = response.data.orders || [];
+        allOrders = allOrders.concat(orders);
+
+        // 檢查是否有下一頁
+        const linkHeader = response.headers.link;
+        nextPageUrl = null;
+        if (linkHeader && linkHeader.includes('rel="next"')) {
+          // 解析 Link header 取得下一頁 URL
+          const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+          if (nextMatch) {
+            nextPageUrl = nextMatch[1];
+          }
+        }
+
+        logger.info(`已取得 ${allOrders.length} 筆訂單...`);
+
+        // 安全機制：避免無限循環
+        if (allOrders.length > 5000) {
+          logger.warn('訂單數量超過 5000，停止分頁請求');
+          break;
+        }
+      }
+
+      // 在這裡直接過濾亞洲國家的訂單
+      const asiaCountries = config.asiaCountries || [
+        'JP',
+        'KR',
+        'SG',
+        'PH',
+        'AU',
+        'NZ',
+        'TH',
+      ];
+      const filteredOrders = allOrders.filter((order) => {
+        const countryCode = order.shipping_address?.country_code;
+        return countryCode && asiaCountries.includes(countryCode);
       });
-      return response.data.orders || [];
+
+      logger.info(`過濾後剩餘 ${filteredOrders.length} 筆亞洲地區訂單`);
+      return filteredOrders;
     } catch (error) {
+      logger.error(`取得訂單時發生錯誤: ${error.message}`);
       throw this.handleError(error);
     }
   }

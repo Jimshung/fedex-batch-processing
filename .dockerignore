@@ -3,9 +3,15 @@
 node_modules
 npm-debug.log
 .env
+.git
 .gitignore
 Dockerfile
 .dockerignore
 README.md
-# 保留 Google 服務帳戶金鑰檔案
+DEPLOY_GUIDE.md
+deploy*.sh
+scripts/
+test/
+docs/
+# 保留必要檔案
 !gcp-service-account.json

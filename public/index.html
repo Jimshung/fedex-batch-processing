@@ -306,7 +306,16 @@
             <table class="orders-table" id="ordersTable">
               <thead>
                 <tr>
-                  <th>核准</th>
+                  <th>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <input
+                        type="checkbox"
+                        id="selectAllCheckbox"
+                        onclick="toggleSelectAll(this)"
+                      />
+                      核准
+                    </div>
+                  </th>
                   <th>處理狀態</th>
                   <th>訂單編號</th>
                   <th>客戶名稱</th>
@@ -422,7 +431,7 @@
             (order) => `
         <tr>
           <td>
-                        <input type="checkbox" ${order.approve || order.status === 'approved' ? 'checked' : ''} disabled>
+            <input type="checkbox" class="order-checkbox" data-id="${order.orderNumber}">
           </td>
           <td>
             <span class="status-badge status-${getStatusClass(order.processingStatus || mapStatus(order.status))}">
@@ -433,12 +442,12 @@
                     <td>${order.customerName}</td>
                     <td>${order.originalTotalPrice || order.totalPrice} ${order.currency || 'USD'}</td>
                     <td><strong>${order.customsValue ? order.customsValue + ' USD' : order.totalPrice + ' USD'}</strong></td>
-                    <td class="address-cell">${formatOriginalAddress(order)}</td>
-                    <td class="address-cell">${formatProcessedAddress(order)}</td>
+          <td class="address-cell">${formatOriginalAddress(order)}</td>
+          <td class="address-cell">${formatProcessedAddress(order)}</td>
                     <td>${order.fedexTracking || '-'}</td>
                     <td>${order.notesError || order.notes || '-'}</td>
-                </tr>
-            `
+        </tr>
+      `
           )
           .join('');
       }
@@ -557,6 +566,24 @@
         btnText.style.display = 'none';
         btnLoading.style.display = 'inline-block';
 
+        // 取得所有被勾選的訂單 order_number
+        const checkedBoxes = document.querySelectorAll(
+          '.order-checkbox:checked'
+        );
+        const selectedOrderNumbers = Array.from(checkedBoxes).map((cb) =>
+          cb.getAttribute('data-id')
+        );
+
+        console.log('前端選擇的訂單編號:', selectedOrderNumbers);
+
+        if (selectedOrderNumbers.length === 0) {
+          showMessage('請先勾選要處理的訂單', 'error');
+          btn.disabled = false;
+          btnText.style.display = 'inline';
+          btnLoading.style.display = 'none';
+          return;
+        }
+
         try {
           const response = await fetch(
             `${API_BASE_URL}/api/process-approved-orders`,
@@ -566,6 +593,7 @@
                 'Content-Type': 'application/json',
               },
               credentials: 'include',
+              body: JSON.stringify({ selectedOrderNumbers }),
             }
           );
 
@@ -625,6 +653,14 @@
           btnText.style.display = 'inline';
           btnLoading.style.display = 'none';
         }
+      }
+
+      // 全選/取消全選
+      function toggleSelectAll(selectAllCheckbox) {
+        const checkboxes = document.querySelectorAll('.order-checkbox');
+        checkboxes.forEach((checkbox) => {
+          checkbox.checked = selectAllCheckbox.checked;
+        });
       }
 
       // 重新整理數據

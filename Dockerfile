@@ -1,32 +1,26 @@
-# Dockerfile
+# Dockerfile for Cloud Run deployment
 
-# --- 第一階段：建置階段 (Build Stage) ---
-# 使用一個包含完整建置工具的 Node.js 映像檔
-FROM node:20-alpine AS build
+FROM node:20-alpine
 
 # 設定工作目錄
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# 複製 package.json 和 package-lock.json
+# 複製 package files 並安裝依賴
 COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-# 安裝生產環境所需的依賴套件
-RUN npm ci --only=production
-
-# --- 第二階段：生產階段 (Production Stage) ---
-# 使用一個更輕量、更安全的 Node.js 映像檔
-FROM node:20-alpine AS production
-
-# 從建置階段複製 Node.js 執行環境所需的依賴項
-COPY --from=build /usr/src/app/node_modules ./node_modules
-
-# 複製你的應用程式原始碼
+# 複製所有應用程式檔案
 COPY . .
 
-# 向外界宣告你的應用程式將在哪個 port 運行
-# Cloud Run 會自動使用這個設定
+# 建立非 root 用戶
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
+
+USER nodejs
+
+# Cloud Run 會自動設定 PORT 環境變數
 EXPOSE 8080
 
-# 啟動應用程式的指令
-# 預設啟動伺服器，但也可以透過環境變數來選擇啟動模式
-CMD [ "node", "src/server.js" ]
+# 啟動應用程式
+CMD ["node", "src/server.js"]
