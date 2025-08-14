@@ -23,4 +23,4 @@ USER nodejs
 EXPOSE 8080
 
 # 啟動應用程式
-CMD ["node", "src/server.js"]
+CMD ["npm", "start"]

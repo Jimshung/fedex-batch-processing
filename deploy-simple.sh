@@ -58,7 +58,8 @@ gcloud run deploy $SERVICE_NAME \
   --set-env-vars "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" \
   --set-env-vars "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" \
   --set-env-vars "SESSION_SECRET=${SESSION_SECRET}" \
-  --set-env-vars "GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}"
+  --set-env-vars "GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}" \
+  --set-env-vars "JWT_SECRET=${JWT_SECRET}"
 
 # ... (獲取服務 URL 並印出的部分維持不變) ...
 SERVICE_URL=$(gcloud run services describe $SERVICE_NAME \

@@ -102,6 +102,12 @@ cp env-example.txt .env
 nano .env
 ```
 
+**⚠️ 重要安全提醒：**
+
+- 請確保 `.env` 文件已加入 `.gitignore`，不會上傳到 Git
+- 不要將真實的 API 金鑰和密碼提交到版本控制
+- `orders.json` 包含客戶數據，也不會上傳到 Git
+
 **必要環境變數：**
 
 ```bash
@@ -135,6 +141,8 @@ npm install
 ```bash
 # 啟動 Web 服務器
 npm run server
+# 或者使用 npm start（兩者相同）
+npm start
 ```
 
 然後訪問 `http://localhost:8080` 進行 Google OAuth 登入。
@@ -143,8 +151,8 @@ npm run server
 
 ```bash
 # 部署 HTTP 伺服器到 Cloud Run
-chmod +x deploy-server.sh
-./deploy-server.sh
+chmod +x deploy-simple.sh
+./deploy-simple.sh
 ```
 
 ## 📊 系統功能

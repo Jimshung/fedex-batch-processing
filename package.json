@@ -2,9 +2,9 @@
   "name": "fedex-batch-processing",
   "version": "1.0.0",
   "description": "整合 Shopify 訂單處理與 FedEx 批次作業系統",
-  "main": "src/main.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node src/main.js",
+    "start": "node src/server.js",
     "server": "node src/server.js",
     "test": "jest",
     "test:system": "node test-system.js",
@@ -17,13 +17,16 @@
   "dependencies": {
     "axios": "^1.7.2",
     "camelcase-keys": "^8.0.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.0.1",
     "express-session": "^1.18.2",
     "form-data": "^4.0.0",
     "google-auth-library": "^8.9.0",
     "googleapis": "^128.0.0",
+    "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0"
   },

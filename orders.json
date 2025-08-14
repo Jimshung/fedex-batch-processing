@@ -1,162 +1,314 @@
 [
   {
-    "shopify_order_id": 5956870275131,
-    "order_number": 89760,
-    "customer_name": "KF",
-    "total_price": "692.93",
+    "shopify_order_id": 5978661781563,
+    "order_number": 90690,
+    "customer_name": "Taehyun Cho",
+    "original_total_price": "250.59",
+    "total_price": "56",
     "currency": "USD",
-    "original_address_1": "3 CUSCADEN WALK #11-01",
-    "original_address_2": "CUSCADEN 3",
-    "processed_address_1": "3 CUSCADEN WALK #11-01",
-    "processed_address_2": "CUSCADEN 3",
-    "items": [
-      {
-        "sku": "neuralli_mp",
-        "name": "Neuralli MP - 6 Bottles",
-        "quantity": 6,
-        "price": "144.36"
-      }
-    ],
-    "status": "pending_review"
-  },
-  {
-    "shopify_order_id": 5956868407355,
-    "order_number": 89759,
-    "customer_name": "OngJion",
-    "total_price": "283.13",
-    "currency": "USD",
-    "original_address_1": "68 Andrew Road",
+    "customs_value": 56,
+    "original_address_1": "406-Dong 804 , 80, Jeongjail-ro, Bundang-gu",
     "original_address_2": "",
-    "processed_address_1": "68 Andrew Road",
-    "processed_address_2": "",
-    "items": [
-      {
-        "sku": "neuralli_mp",
-        "name": "Neuralli MP - (SG) International",
-        "quantity": 3,
-        "price": "117.97"
-      }
-    ],
-    "status": "pending_review"
-  },
-  {
-    "shopify_order_id": 5956495376443,
-    "order_number": 89722,
-    "customer_name": "ChanChek Chee",
-    "total_price": "353.76",
-    "currency": "USD",
-    "original_address_1": "150 Gul Circle",
-    "original_address_2": "",
-    "processed_address_1": "150 Gul Circle",
-    "processed_address_2": "",
-    "items": [
-      {
-        "sku": "neuralli_mp",
-        "name": "Neuralli MP - (SG) International",
-        "quantity": 3,
-        "price": "117.92"
-      }
-    ],
-    "status": "pending_review"
-  },
-  {
-    "shopify_order_id": 5956163829819,
-    "order_number": 89716,
-    "customer_name": "Keng YongTeo",
-    "total_price": "285.58",
-    "currency": "USD",
-    "original_address_1": "87 COMPASSVALE BOW #02-26",
-    "original_address_2": "JEWEL @ BUANGKOK",
-    "processed_address_1": "87 COMPASSVALE BOW #02-26",
-    "processed_address_2": "JEWEL @ BUANGKOK",
+    "processed_address_1": "406-Dong 804 , 80, Jeongjail-ro,",
+    "processed_address_2": "Bundang-gu",
+    "processed_address_3": "",
+    "country_code": "KR",
     "items": [
       {
         "sku": "neuralli_mp",
         "name": "Neuralli MP - Twins",
         "quantity": 2,
-        "price": "142.79"
+        "price": "142.38"
       }
     ],
-    "status": "pending_review"
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
   },
   {
-    "shopify_order_id": 5956136992827,
-    "order_number": 89715,
-    "customer_name": "LooLester",
-    "total_price": "692.88",
+    "shopify_order_id": 5978255458363,
+    "order_number": 90673,
+    "customer_name": "Hazel Retardo",
+    "original_total_price": "342.72",
+    "total_price": "56",
     "currency": "USD",
-    "original_address_1": "43 Almond Street",
-    "original_address_2": "43",
-    "processed_address_1": "43 Almond Street",
-    "processed_address_2": "43",
+    "customs_value": 56,
+    "original_address_1": "21 Jalaur Triangle NIA Village",
+    "original_address_2": "",
+    "processed_address_1": "21 Jalaur Triangle NIA Village",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "PH",
     "items": [
       {
         "sku": "neuralli_mp",
-        "name": "Neuralli MP - 6 Bottles",
-        "quantity": 6,
-        "price": "144.35"
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "142.99"
       }
     ],
-    "status": "pending_review"
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
   },
   {
-    "shopify_order_id": 5954714337339,
-    "order_number": 89625,
-    "customer_name": "FletcherWilliam",
-    "total_price": "282.93",
+    "shopify_order_id": 5977595379771,
+    "order_number": 90649,
+    "customer_name": "Ivy Li",
+    "original_total_price": "228.62",
+    "total_price": "56",
     "currency": "USD",
-    "original_address_1": "11 Stamford Road",
-    "original_address_2": "Eden Residences Capitol 05-02",
-    "processed_address_1": "11 Stamford Road",
-    "processed_address_2": "Eden Residences Capitol 05-02",
+    "customs_value": 56,
+    "original_address_1": "13 silat avenue #35-41",
+    "original_address_2": "Avenue south residence",
+    "processed_address_1": "13 silat avenue #35-41, Avenue",
+    "processed_address_2": "south residence",
+    "processed_address_3": "",
+    "country_code": "SG",
     "items": [
       {
         "sku": "neuralli_mp",
-        "name": "Neuralli MP - (SG) International",
-        "quantity": 3,
-        "price": "117.89"
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "142.89"
       }
     ],
-    "status": "pending_review"
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
   },
   {
-    "shopify_order_id": 5953365671995,
-    "order_number": 89577,
-    "customer_name": "ChenRuoshi",
-    "total_price": "353.97",
+    "shopify_order_id": 5977378095163,
+    "order_number": 90643,
+    "customer_name": "Seryung Choi",
+    "original_total_price": "134.24",
+    "total_price": "28",
     "currency": "USD",
-    "original_address_1": "32 UPPER SERANGOON VIEW #06-41",
-    "original_address_2": "RIO VISTA",
-    "processed_address_1": "32 UPPER SERANGOON VIEW #06-41",
-    "processed_address_2": "RIO VISTA",
-    "items": [
-      {
-        "sku": "neuralli_mp",
-        "name": "Neuralli MP - (SG) International",
-        "quantity": 3,
-        "price": "117.99"
-      }
-    ],
-    "status": "pending_review"
-  },
-  {
-    "shopify_order_id": 5953244594235,
-    "order_number": 89574,
-    "customer_name": "謝沛柔",
-    "total_price": "224.04",
-    "currency": "USD",
-    "original_address_1": "浦和区岸町",
-    "original_address_2": "6-6-23-3",
-    "processed_address_1": "浦和区岸町",
-    "processed_address_2": "6-6-23-3",
+    "customs_value": 28,
+    "original_address_1": "금호로 117",
+    "original_address_2": "금호자이1차아파트 104동1005호",
+    "processed_address_1": "금호로 117, 금호자이1차아파트 104동1005호",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "KR",
     "items": [
       {
         "sku": "neuralli_mp",
         "name": "Neuralli MP - 1 Bottle",
         "quantity": 1,
-        "price": "184.70"
+        "price": "167.80"
       }
     ],
-    "status": "pending_review"
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
+  },
+  {
+    "shopify_order_id": 5977153110075,
+    "order_number": 90609,
+    "customer_name": "DONGCHAN BAE",
+    "original_total_price": "250.60",
+    "total_price": "56",
+    "currency": "USD",
+    "customs_value": 56,
+    "original_address_1": "22, Seocho-daero 33-gil",
+    "original_address_2": "201dong 201ho",
+    "processed_address_1": "22, Seocho-daero 33-gil, 201dong",
+    "processed_address_2": "201ho",
+    "processed_address_3": "",
+    "country_code": "KR",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "142.39"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
+  },
+  {
+    "shopify_order_id": 5976896176187,
+    "order_number": 90607,
+    "customer_name": "Natalie Egan",
+    "original_total_price": "0.00",
+    "total_price": "84",
+    "currency": "USD",
+    "customs_value": 84,
+    "original_address_1": "13 Walmsley Cres",
+    "original_address_2": "",
+    "processed_address_1": "13 Walmsley Cres",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "AU",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Asia",
+        "quantity": 3,
+        "price": "184.67"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
+  },
+  {
+    "shopify_order_id": 5963286675515,
+    "order_number": 90086,
+    "customer_name": "Teresa Test",
+    "original_total_price": "168.27",
+    "total_price": "28",
+    "currency": "USD",
+    "customs_value": 28,
+    "original_address_1": "702-115 Donggang Atelier Apartment, 56, Jukcheongang-gil, Yonghyeon-myeon",
+    "original_address_2": "",
+    "processed_address_1": "702-115 Donggang Atelier Apartment,",
+    "processed_address_2": "56, Jukcheongang-gil,",
+    "processed_address_3": "Yonghyeon-myeon",
+    "country_code": "KR",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Asia",
+        "quantity": 1,
+        "price": "168.27"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
+  },
+  {
+    "shopify_order_id": 5963282612283,
+    "order_number": 90085,
+    "customer_name": "Teresa Test",
+    "original_total_price": "183.65",
+    "total_price": "28",
+    "currency": "USD",
+    "customs_value": 28,
+    "original_address_1": "73 Soi Pattanawej 12 Sukhumvit 71 Road, Phrakanong",
+    "original_address_2": "",
+    "processed_address_1": "73 Soi Pattanawej 12 Sukhumvit 71",
+    "processed_address_2": "Road, Phrakanong",
+    "processed_address_3": "",
+    "country_code": "TH",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Asia",
+        "quantity": 1,
+        "price": "183.65"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
+  },
+  {
+    "shopify_order_id": 5963279499323,
+    "order_number": 90084,
+    "customer_name": "Teresa Test",
+    "original_total_price": "167.85",
+    "total_price": "28",
+    "currency": "USD",
+    "customs_value": 28,
+    "original_address_1": "1 Jalan Anak Bukit, #08-14 Sherwood Towers (Low-Rise)",
+    "original_address_2": "",
+    "processed_address_1": "1 Jalan Anak Bukit, #08-14 Sherwood",
+    "processed_address_2": "Towers (Low-Rise)",
+    "processed_address_3": "",
+    "country_code": "SG",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Asia",
+        "quantity": 1,
+        "price": "167.85"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.188Z"
+  },
+  {
+    "shopify_order_id": 5963277008955,
+    "order_number": 90083,
+    "customer_name": "Teresa Test",
+    "original_total_price": "185.30",
+    "total_price": "28",
+    "currency": "USD",
+    "customs_value": 28,
+    "original_address_1": "1008 Florence Hikari-machi Grand Arc, 2-3-7 Hikari-machi, Higashi-ku",
+    "original_address_2": "",
+    "processed_address_1": "1008 Florence Hikari-machi Grand",
+    "processed_address_2": "Arc, 2-3-7 Hikari-machi, Higashi-ku",
+    "processed_address_3": "",
+    "country_code": "JP",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Asia",
+        "quantity": 1,
+        "price": "185.30"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.189Z"
+  },
+  {
+    "shopify_order_id": 5963272945723,
+    "order_number": 90082,
+    "customer_name": "Teresa Test",
+    "original_total_price": "169.19",
+    "total_price": "28",
+    "currency": "USD",
+    "customs_value": 28,
+    "original_address_1": "unit 619 Heliconia building, 69 coronado street, Tivoli Garden Residences",
+    "original_address_2": "",
+    "processed_address_1": "unit 619 Heliconia building, 69",
+    "processed_address_2": "coronado street, Tivoli Garden",
+    "processed_address_3": "Residences",
+    "country_code": "PH",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Asia",
+        "quantity": 1,
+        "price": "169.19"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.189Z"
+  },
+  {
+    "shopify_order_id": 4855090184251,
+    "order_number": 21906,
+    "customer_name": "Paige Badenoch",
+    "original_total_price": "331.00",
+    "total_price": "0",
+    "currency": "USD",
+    "customs_value": 0,
+    "original_address_1": "2 Aqua Street",
+    "original_address_2": "Unit 1401",
+    "processed_address_1": "2 Aqua Street, Unit 1401",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "AU",
+    "items": [
+      {
+        "sku": "neuralli",
+        "name": "Neuralli – PS128 medical probiotic",
+        "quantity": 1,
+        "price": "165.00"
+      },
+      {
+        "sku": "neuralli",
+        "name": "Neuralli – PS128 medical probiotic",
+        "quantity": 1,
+        "price": "165.00"
+      },
+      {
+        "sku": "",
+        "name": "International shipping fee",
+        "quantity": 1,
+        "price": "99.00"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-14T16:46:32.189Z"
   }
 ]
