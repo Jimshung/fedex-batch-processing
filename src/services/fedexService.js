@@ -49,22 +49,26 @@ class FedExService {
   }
 
   /**
-   * 上傳電子貿易文件 (ETD)
+   * 上傳電子貿易文件 (ETD) - 暫時使用模擬模式
    * @param {string[]} documentPaths 文件路徑陣列
+   * @param {Object} orderData 訂單資料（用於設定目的地國家）
    * @returns {Promise<Object>} 上傳結果
    */
-  async uploadEtdDocuments(documentPaths) {
+  async uploadEtdDocuments(documentPaths, orderData = null) {
     try {
-      // 模擬模式 - 直接返回模擬的文件參考號
-      logger.info(`模擬上傳 ETD 文件`);
+      // 暫時使用模擬模式，因為 ETD API 端點需要特殊權限或生產環境
+      logger.warning(
+        `ETD 文件上傳功能暫時使用模擬模式 - 端點 /documents/v1/etds/upload 返回 404`
+      );
+      logger.info(`這可能是因為測試環境限制或需要特殊的 API 權限`);
 
-      // 模擬 API 延遲
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const destinationCountry = orderData?.country_code || 'US';
+      logger.info(
+        `準備上傳的文件: ${documentPaths.join(', ')} (目的地: ${destinationCountry})`
+      );
 
-      // 產生隨機參考號
-      const documentReferenceNumber =
-        'DOC' + Math.random().toString(36).substring(2, 10).toUpperCase();
-
+      // 模擬成功上傳
+      const documentReferenceNumber = `MOCK_DOC_${Date.now()}_${destinationCountry}`;
       logger.success(
         `模擬成功上傳 ETD 文件，參考號: ${documentReferenceNumber}`
       );
@@ -75,53 +79,87 @@ class FedExService {
         error: null,
       };
 
-      /* 真實 API 呼叫（已註解）
+      /* 真實 API 實作（暫時註解）
+      // 使用正確的 FedEx ETD API 端點
+      logger.info(`開始上傳 ETD 文件到 FedEx API`);
+
       const accessToken = await this.getAccessToken();
-      
+
       // 建立 FormData 物件
       const formData = new FormData();
-      
+
       // 加入必要的請求參數
-      formData.append('meta', JSON.stringify({
+      const metaData = {
         etdType: 'COMMERCIAL_INVOICE',
         uploaderId: config.fedex.accountNumber,
         shipTimestamp: new Date().toISOString(),
-        documentType: 'COMMERCIAL_INVOICE'
-      }));
-      
+        documentType: 'COMMERCIAL_INVOICE',
+        documentReference: `DOC_${Date.now()}`,
+        originCountryCode: 'US',
+        destinationCountryCode: orderData?.country_code || 'US',
+      };
+
+      formData.append('meta', JSON.stringify(metaData));
+
       // 加入文件
       for (const documentPath of documentPaths) {
-        const fileContent = await fs.readFile(documentPath);
-        const fileName = path.basename(documentPath);
-        formData.append('documents', fileContent, {
-          filename: fileName,
-          contentType: 'application/pdf',
-        });
+        try {
+          const fileContent = await fs.readFile(documentPath);
+          const fileName = path.basename(documentPath);
+          
+          // 檢查文件是否存在
+          logger.info(`準備上傳文件: ${fileName}`);
+          
+          formData.append('documents', fileContent, {
+            filename: fileName,
+            contentType: 'application/pdf',
+          });
+        } catch (fileError) {
+          logger.error(`讀取文件失敗: ${documentPath}, 錯誤: ${fileError.message}`);
+          throw new Error(`無法讀取文件: ${documentPath}`);
+        }
       }
-      
-      // 發送請求
+
+      // 發送請求 - 使用正確的端點
       const response = await axios.post(
         `${this.baseUrl}/documents/v1/etds/upload`,
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
             ...formData.getHeaders(),
           },
+          timeout: 30000, // 30 秒超時
         }
       );
-      
+
       // 取得文件參考號
-      const documentReferenceNumber = response.data.output?.uploadId;
-      
+      const documentReferenceNumber = response.data.output?.uploadId || response.data.output?.documentReference;
+
       logger.success(`成功上傳 ETD 文件，參考號: ${documentReferenceNumber}`);
-      
+
       return {
         success: true,
         documentReferenceNumber,
         error: null,
       };
-      */
+    } catch (error) {
+      const errorMessage = this.extractErrorMessage(error);
+      logger.error(`上傳 ETD 文件失敗: ${errorMessage}`);
+      
+      // 添加更詳細的錯誤日誌
+      if (error.response) {
+        logger.error(`HTTP 狀態碼: ${error.response.status}`);
+        logger.error(`響應標頭: ${JSON.stringify(error.response.headers)}`);
+      }
+
+      return {
+        success: false,
+        documentReferenceNumber: null,
+        error: errorMessage,
+      };
+    }
+    */
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
       logger.error(`上傳 ETD 文件失敗: ${errorMessage}`);
@@ -147,7 +185,10 @@ class FedExService {
       // 1. 上傳電子貿易文件
       let documentReference = null;
       if (documentPaths && documentPaths.length > 0) {
-        const uploadResult = await this.uploadEtdDocuments(documentPaths);
+        const uploadResult = await this.uploadEtdDocuments(
+          documentPaths,
+          orderData
+        );
         if (uploadResult.success) {
           documentReference = uploadResult.documentReferenceNumber;
         } else {
@@ -184,64 +225,25 @@ class FedExService {
    */
   async createShipment(orderData, documentReferenceNumber = null) {
     try {
-      // 模擬模式 - 不呼叫真實的 FedEx API
-      logger.info(`模擬 FedEx API 呼叫，訂單編號: ${orderData.order_number}`);
+      // 真實 API 呼叫
+      logger.info(
+        `開始呼叫 FedEx Ship API，訂單編號: ${orderData.order_number}`
+      );
 
-      // 模擬 API 延遲
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // 模擬成功率 80%
-      const isSuccess = Math.random() > 0.2;
-
-      if (isSuccess) {
-        const trackingNumber =
-          'FX' + Math.random().toString(36).substr(2, 9).toUpperCase();
-
-        logger.success(
-          `模擬成功建立 FedEx 貨運標籤，訂單編號: ${orderData.order_number}, 追蹤號碼: ${trackingNumber}`
-        );
-
-        return {
-          success: true,
-          trackingNumber: trackingNumber,
-          labelUrl: null, // 模擬模式下不提供標籤 URL
-          error: null,
-        };
-      } else {
-        const errors = [
-          'Invalid postal code',
-          'Address not found',
-          'Service not available in this area',
-          'Package weight exceeds limit',
-          'Invalid recipient information',
-        ];
-
-        const errorMessage = errors[Math.floor(Math.random() * errors.length)];
-
-        logger.error(
-          `模擬 FedEx API 呼叫失敗，訂單編號: ${orderData.order_number}, 錯誤: ${errorMessage}`
-        );
-
-        return {
-          success: false,
-          trackingNumber: null,
-          labelUrl: null,
-          error: errorMessage,
-        };
-      }
-
-      /* 真實 API 呼叫（已註解）
       const accessToken = await this.getAccessToken();
 
       // 準備 FedEx API 請求數據
-      const shipmentRequest = this.prepareShipmentRequest(orderData, documentReferenceNumber);
+      const shipmentRequest = this.prepareShipmentRequest(
+        orderData,
+        documentReferenceNumber
+      );
 
       const response = await axios.post(
         `${this.baseUrl}/ship/v1/shipments`,
         shipmentRequest,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
             'X-locale': 'en_US',
           },
@@ -255,11 +257,10 @@ class FedExService {
       return {
         success: true,
         trackingNumber:
-          response.data.output?.transactionDetail?.customerTransactionId,
+          response.data.output?.transactionShipments?.[0]?.masterTrackingNumber,
         labelUrl: response.data.output?.labelResults?.[0]?.label,
         error: null,
       };
-      */
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
       logger.error(
@@ -324,10 +325,12 @@ class FedExService {
             contact: {
               personName: orderData.customer_name,
               phoneNumber: '1234567890', // 理想情況下應從訂單取得電話
-              emailAddress: 'recipient@example.com', // 理想情況下應從訂單取得郵箱
             },
             address: {
               streetLines,
+              city: orderData.city || 'Unknown',
+              stateOrProvinceCode: orderData.province || '',
+              postalCode: orderData.postal_code || '00000',
               countryCode,
             },
           },
@@ -340,13 +343,14 @@ class FedExService {
         shippingChargesPayment: {
           paymentType: 'SENDER',
         },
-        labelSpecification: {
-          imageType: 'PDF',
-          labelStockType: 'PAPER_85X11_TOP_HALF_LABEL',
-        },
+        labelSpecification: {},
         customsClearanceDetail: {
           dutiesPayment: {
             paymentType: 'SENDER',
+          },
+          totalCustomsValue: {
+            amount: orderData.customs_value || 28,
+            currency: 'USD',
           },
           commodities: [
             {
@@ -377,12 +381,14 @@ class FedExService {
               height: 4,
               units: 'IN',
             },
+            groupPackageCount: 1,
           },
         ],
       },
       accountNumber: {
         value: config.fedex.accountNumber,
       },
+      labelResponseOptions: 'URL_ONLY',
     };
 
     // 如果有文件參考號，加入電子貿易文件資訊
@@ -404,8 +410,19 @@ class FedExService {
   }
 
   extractErrorMessage(error) {
+    console.log(
+      'FedEx API Error Response:',
+      JSON.stringify(error.response?.data, null, 2)
+    );
+
     if (error.response?.data?.errors) {
-      return error.response.data.errors.map((err) => err.message).join(', ');
+      const errorDetails = error.response.data.errors
+        .map(
+          (err) =>
+            `${err.message} (${err.code || 'NO_CODE'}) - Field: ${err.field || 'UNKNOWN'}`
+        )
+        .join(', ');
+      return `${error.response.data.message || 'Validation failed'}: ${errorDetails}`;
     }
     if (error.response?.data?.message) {
       return error.response.data.message;

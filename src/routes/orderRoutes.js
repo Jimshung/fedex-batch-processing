@@ -46,11 +46,13 @@ router.post(
   ...createProtectedRoute(async (req, res) => {
     try {
       logger.info('收到處理已核准訂單的請求');
-      const { orderIds } = req.body;
-      logger.log('🚀 ~ orderIds:', orderIds);
+      const { selectedOrderNumbers } = req.body;
+      logger.log('🚀 ~ selectedOrderNumbers:', selectedOrderNumbers);
 
       const result =
-        await orderProcessingService.processApprovedOrders(orderIds);
+        await orderProcessingService.processApprovedOrders(
+          selectedOrderNumbers
+        );
       res.json(result);
     } catch (error) {
       logger.error(`處理已核准訂單時發生錯誤: ${error.message}`);

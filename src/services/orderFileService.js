@@ -43,20 +43,51 @@ class OrderFileService {
   }
 
   /**
-   * 覆蓋 orders.json，僅保留最新未出貨訂單
+   * 合併更新 orders.json，保留本地處理結果
    * @param {Array} newOrders Shopify 未出貨訂單陣列
    * @returns {Promise<number>} 寫入的訂單數量
    */
   async updateOrders(newOrders) {
     try {
-      // 直接覆蓋 orders.json，僅保留最新未出貨訂單
-      await this.writeOrders(newOrders);
-      logger.info('已覆蓋 orders.json，僅保留最新未出貨訂單');
-      return newOrders.length;
+      // 讀取現有訂單，保留本地處理結果
+      const existingOrders = await this.readOrders();
+      const existingMap = new Map(
+        existingOrders.map((o) => [o.shopify_order_id.toString(), o])
+      );
+
+      // 合併新舊資料，保留本地欄位
+      const merged = newOrders.map((order) => {
+        const old = existingMap.get(order.shopify_order_id.toString());
+        return old ? { ...order, ...this.pickLocalFields(old) } : order;
+      });
+
+      await this.writeOrders(merged);
+      logger.info(
+        `已合併更新 orders.json，保留本地處理結果，共 ${merged.length} 筆訂單`
+      );
+      return merged.length;
     } catch (error) {
       logger.error(`更新訂單資料失敗: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * 提取需要保留的本地欄位
+   * @param {Object} order 現有訂單
+   * @returns {Object} 本地欄位
+   */
+  pickLocalFields(order) {
+    return {
+      status: order.status,
+      fedex_tracking: order.fedex_tracking,
+      processing_status: order.processing_status,
+      notes_error: order.notes_error,
+      notes: order.notes,
+      completed_at: order.completed_at,
+      failed_at: order.failed_at,
+      // 保留其他本地處理欄位
+    };
   }
 
   /**

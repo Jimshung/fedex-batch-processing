@@ -181,6 +181,9 @@ class ShopifyService {
       processed_address_2: splitAddressResult.address2,
       processed_address_3: splitAddressResult.address3,
       country_code: shippingAddress.country_code || '',
+      city: shippingAddress.city || '',
+      postal_code: shippingAddress.zip || '',
+      province: shippingAddress.province || '',
       items,
       status: 'pending_review', // 初始狀態: pending_review, approved, processing, completed, failed
       created_at: new Date().toISOString(),

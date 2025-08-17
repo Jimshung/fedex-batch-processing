@@ -18,28 +18,43 @@ class OrderProcessingService {
     try {
       logger.info('開始處理已核准訂單');
 
-      let approvedOrders = await this.orderFileService.getApprovedOrders();
+      let ordersToProcess = [];
 
-      // 如果有傳入特定訂單ID，則過濾出這些訂單
+      // 如果有傳入特定訂單ID，則處理這些訂單
       if (orderIds && orderIds.length > 0) {
-        approvedOrders = approvedOrders.filter((order) =>
-          orderIds.includes(order.orderNumber)
+        const allOrders = await this.orderFileService.readOrders();
+        ordersToProcess = allOrders.filter(
+          (order) =>
+            order.order_number &&
+            orderIds.includes(order.order_number.toString())
         );
+
+        // 調試：檢查過濾結果
+        logger.info(`總訂單數: ${allOrders.length}`);
+        logger.info(`要查找的訂單編號: ${orderIds.join(', ')}`);
+        logger.info(
+          `找到的訂單: ${ordersToProcess.map((o) => o.order_number).join(', ')}`
+        );
+        logger.info(`找到 ${ordersToProcess.length} 筆指定訂單進行處理`);
+      } else {
+        // 否則處理所有已核准且未處理的訂單
+        ordersToProcess = await this.orderFileService.getApprovedOrders();
+        logger.info(`找到 ${ordersToProcess.length} 筆已核准訂單進行處理`);
       }
 
-      if (approvedOrders.length === 0) {
+      if (ordersToProcess.length === 0) {
         return {
           success: true,
           data: { processed: 0, succeeded: 0, failed: 0 },
           message:
             orderIds && orderIds.length > 0
-              ? '沒有找到符合的已核准訂單'
+              ? '沒有找到符合的訂單'
               : '沒有已核准的訂單需要處理',
         };
       }
 
       const results = await this._processOrders(
-        approvedOrders,
+        ordersToProcess,
         'processing',
         '處理中'
       );
@@ -109,14 +124,29 @@ class OrderProcessingService {
    */
   async _processOrders(orders, processingStatus, processingStatusText) {
     const results = [];
-    const documentPaths = [
-      // 在這裡放你的固定 PDF 檔案路徑
-      // './documents/commercial_invoice.pdf',
-      // './documents/customs_declaration.pdf'
-    ];
 
     for (const order of orders) {
       try {
+        // 根據國家代碼選擇對應的PDF文件
+        let documentPaths = [];
+        const countryCode = order.country_code;
+
+        if (countryCode === 'NZ') {
+          documentPaths = ['./documents/Bened_Neuralli MP_Ingredient list.pdf'];
+          logger.info(
+            `紐西蘭訂單 ${order.order_number}，使用 Bened_Neuralli MP_Ingredient list.pdf`
+          );
+        } else if (countryCode === 'PH') {
+          documentPaths = ['./documents/Neuralli MP_MSDS.pdf'];
+          logger.info(
+            `菲律賓訂單 ${order.order_number}，使用 Neuralli MP_MSDS.pdf`
+          );
+        } else {
+          logger.info(
+            `訂單 ${order.order_number} 國家代碼 ${countryCode}，不需要特殊文件`
+          );
+        }
+
         // 更新狀態為處理中
         await this.orderFileService.updateOrder(order.shopify_order_id, {
           status: processingStatus,

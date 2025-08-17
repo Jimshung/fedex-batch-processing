@@ -47,6 +47,7 @@ orders.json
 # 測試文件
 test/fedex-api.http
 test-direct.http
+scripts/test-*.js
 
 # 其他敏感文件
 *.secret
