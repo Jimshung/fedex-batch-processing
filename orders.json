@@ -1,5 +1,255 @@
 [
   {
+    "shopify_order_id": 5986554904635,
+    "order_number": 90956,
+    "customer_name": "Li Tianchang",
+    "original_total_price": "304.69",
+    "total_price": "56",
+    "currency": "USD",
+    "customs_value": 56,
+    "original_address_1": "Takadanobaba 4 chome-40-13 402",
+    "original_address_2": "",
+    "processed_address_1": "Takadanobaba 4 chome-40-13 402",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "JP",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "156.99"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5986397683771,
+    "order_number": 90952,
+    "customer_name": "Sujeong OH",
+    "original_total_price": "250.88",
+    "total_price": "56",
+    "currency": "USD",
+    "customs_value": 56,
+    "original_address_1": "76, Dongtangiheung-ro 353beon-gil",
+    "original_address_2": "1637-402",
+    "processed_address_1": "76, Dongtangiheung-ro 353beon-gil,",
+    "processed_address_2": "1637-402",
+    "processed_address_3": "",
+    "country_code": "KR",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "142.54"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5985356742715,
+    "order_number": 90924,
+    "customer_name": "Tomonori Shindo",
+    "original_total_price": "380.86",
+    "total_price": "56",
+    "currency": "USD",
+    "customs_value": 56,
+    "original_address_1": "NaritaHigashi 5-29-6-407",
+    "original_address_2": "",
+    "processed_address_1": "NaritaHigashi 5-29-6-407",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "JP",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "156.99"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5985282752571,
+    "order_number": 90923,
+    "customer_name": "Steven Harris",
+    "original_total_price": "198.61",
+    "total_price": "28",
+    "currency": "USD",
+    "customs_value": 28,
+    "original_address_1": "8 HARMSWORTH RD",
+    "original_address_2": "",
+    "processed_address_1": "8 HARMSWORTH RD",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "AU",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - 1 Bottle",
+        "quantity": 1,
+        "price": "184.81"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5984894091323,
+    "order_number": 90883,
+    "customer_name": "Jiyun Choi",
+    "original_total_price": "134.22",
+    "total_price": "28",
+    "currency": "USD",
+    "customs_value": 28,
+    "original_address_1": "명지오션시티11로 51",
+    "original_address_2": "316동 602호",
+    "processed_address_1": "명지오션시티11로 51, 316동 602호",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "KR",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - 1 Bottle",
+        "quantity": 1,
+        "price": "167.77"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5982865981499,
+    "order_number": 90824,
+    "customer_name": "yoa jung",
+    "original_total_price": "228.47",
+    "total_price": "56",
+    "currency": "USD",
+    "customs_value": 56,
+    "original_address_1": "160 Sixth Avenue",
+    "original_address_2": "0403",
+    "processed_address_1": "160 Sixth Avenue, 0403",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "SG",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "142.79"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5981301604411,
+    "order_number": 90813,
+    "customer_name": "Jackson Ang",
+    "original_total_price": "282.57",
+    "total_price": "84",
+    "currency": "USD",
+    "customs_value": 84,
+    "original_address_1": "442D FAJAR ROAD, FAJAR HILLS",
+    "original_address_2": "# 10-38",
+    "processed_address_1": "442D FAJAR ROAD, FAJAR HILLS, #",
+    "processed_address_2": "10-38",
+    "processed_address_3": "",
+    "country_code": "SG",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - (SG) International",
+        "quantity": 3,
+        "price": "117.74"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5980867035195,
+    "order_number": 90811,
+    "customer_name": "NAOMI KOBAYASHI",
+    "original_total_price": "305.07",
+    "total_price": "56",
+    "currency": "USD",
+    "customs_value": 56,
+    "original_address_1": "50-2 omioka Hanbarada",
+    "original_address_2": "",
+    "processed_address_1": "50-2 omioka Hanbarada",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "JP",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Twins",
+        "quantity": 2,
+        "price": "157.19"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5980537913403,
+    "order_number": 90803,
+    "customer_name": "Ley Win",
+    "original_total_price": "0.00",
+    "total_price": "84",
+    "currency": "USD",
+    "customs_value": 84,
+    "original_address_1": "17 TENNANT PLACE",
+    "original_address_2": "",
+    "processed_address_1": "17 TENNANT PLACE",
+    "processed_address_2": "",
+    "processed_address_3": "",
+    "country_code": "AU",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - Asia",
+        "quantity": 3,
+        "price": "184.33"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
+    "shopify_order_id": 5979483996219,
+    "order_number": 90729,
+    "customer_name": "Andrew Ching",
+    "original_total_price": "282.10",
+    "total_price": "84",
+    "currency": "USD",
+    "customs_value": 84,
+    "original_address_1": "808 THOMSON ROAD #15-21",
+    "original_address_2": "THOMSON 800",
+    "processed_address_1": "808 THOMSON ROAD #15-21, THOMSON",
+    "processed_address_2": "800",
+    "processed_address_3": "",
+    "country_code": "SG",
+    "items": [
+      {
+        "sku": "neuralli_mp",
+        "name": "Neuralli MP - (SG) International",
+        "quantity": 3,
+        "price": "117.54"
+      }
+    ],
+    "status": "pending_review",
+    "created_at": "2025-08-17T03:50:15.515Z"
+  },
+  {
     "shopify_order_id": 5978661781563,
     "order_number": 90690,
     "customer_name": "Taehyun Cho",
@@ -22,7 +272,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5978255458363,
@@ -47,7 +297,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5977595379771,
@@ -72,7 +322,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5977378095163,
@@ -97,7 +347,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5977153110075,
@@ -122,7 +372,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5976896176187,
@@ -147,7 +397,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5963286675515,
@@ -172,7 +422,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5963282612283,
@@ -197,7 +447,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5963279499323,
@@ -222,7 +472,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.188Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5963277008955,
@@ -247,7 +497,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.189Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 5963272945723,
@@ -272,7 +522,7 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.189Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   },
   {
     "shopify_order_id": 4855090184251,
@@ -309,6 +559,6 @@
       }
     ],
     "status": "pending_review",
-    "created_at": "2025-08-14T16:46:32.189Z"
+    "created_at": "2025-08-17T03:50:15.515Z"
   }
 ]

@@ -1,6 +1,6 @@
 # FedEx 訂單處理系統
 
-一個以 Google Sheet 為中心的訂單審核與處理系統，具備 Web 認證界面和完整的訂單管理功能。
+一個智能的訂單審核與處理系統，具備 Web 認證界面和完整的訂單管理功能。
 
 ## 🎯 系統目標
 
@@ -122,19 +122,19 @@ nano .env
 SHOPIFY_SHOP_NAME=your-shop-name
 SHOPIFY_ACCESS_TOKEN=your-access-token
 
-# Google Sheets API
-GOOGLE_SHEET_ID=your-sheet-id
-GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./gcp-service-account.json
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID=your-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-oauth-client-secret
+GOOGLE_CALLBACK_URL=https://your-domain.com/auth/google/callback
 
 # FedEx API
 FEDEX_CLIENT_ID=your-client-id
 FEDEX_CLIENT_SECRET=your-client-secret
 FEDEX_ACCOUNT_NUMBER=your-account-number
 
-# Google OAuth 2.0
-GOOGLE_CLIENT_ID=your-oauth-client-id
-GOOGLE_CLIENT_SECRET=your-oauth-client-secret
-SESSION_SECRET=your-session-secret
+# Session 和 JWT
+SESSION_SECRET=your-session-secret-key
+JWT_SECRET=your-jwt-secret-key
 ```
 
 ### 2. 安裝依賴
@@ -173,7 +173,7 @@ chmod +x deploy-simple.sh
 - 🚀 **一鍵處理**：處理已核准訂單
 - 🔄 **失敗重試**：重新處理失敗訂單
 - 📋 **訂單列表**：完整訂單清單與狀態
-- 🔗 **Google Sheet**：直接連結到原始數據
+- 🧠 **智能同步**：自動檢測數據變化，保持最新狀態
 
 ### 🔌 API 端點（需要認證）
 

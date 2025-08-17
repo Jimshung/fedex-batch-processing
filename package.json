@@ -9,7 +9,6 @@
     "test": "jest",
     "test:system": "node test-system.js",
     "check-config": "node scripts/check-config.js",
-    "create-script": "node scripts/create-google-apps-script.js",
     "lint": "eslint src/",
     "format": "prettier --write src/**/*.js",
     "sync-orders": "node scripts/sync-shopify-orders.js"
@@ -37,7 +36,7 @@
     "shopify",
     "fedex",
     "batch-processing",
-    "google-sheets"
+    "order-management"
   ],
   "author": "Jim Shun",
   "license": "MIT"

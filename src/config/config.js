@@ -11,8 +11,15 @@ module.exports = {
     apiVersion: '2024-07',
   },
   google: {
-    sheetId: process.env.GOOGLE_SHEET_ID,
-    serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+  },
+  session: {
+    secret: process.env.SESSION_SECRET,
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET,
   },
   fedex: {
     clientId: process.env.FEDEX_CLIENT_ID,

@@ -291,16 +291,19 @@
               style="display: none"
             ></span>
           </button>
-          <button class="btn btn-success" onclick="refreshData()">
-            <span>📊 重新整理數據</span>
-          </button>
         </div>
 
         <!-- 訂單列表 -->
         <div>
           <h3>
             📋 訂單列表
-            <button class="refresh-btn" onclick="refreshData()">🔄</button>
+            <button
+              class="refresh-btn"
+              onclick="refreshData(true)"
+              title="強制同步最新數據"
+            >
+              🔄
+            </button>
           </h3>
           <div class="orders-table-container">
             <table class="orders-table" id="ordersTable">
@@ -381,13 +384,16 @@
       }
 
       // 載入訂單列表
-      async function loadOrders() {
+      async function loadOrders(forceSync = false) {
         const tbody = document.getElementById('ordersTableBody');
         // 加入簡單 loading 效果
         tbody.innerHTML =
           '<tr><td colspan="10" style="text-align: center; padding: 40px; color: #667eea;">🔄 載入中...</td></tr>';
         try {
-          const response = await fetch(`${API_BASE_URL}/api/orders`, {
+          const url = forceSync
+            ? `${API_BASE_URL}/api/orders?forceSync=true`
+            : `${API_BASE_URL}/api/orders`;
+          const response = await fetch(url, {
             credentials: 'include',
           });
 
@@ -601,7 +607,7 @@
 
           if (data.success) {
             showMessage(data.message, 'success');
-            await refreshData();
+            await refreshData(true);
           } else {
             showMessage(data.message || '處理失敗', 'error');
           }
@@ -641,7 +647,7 @@
 
           if (data.success) {
             showMessage(data.message, 'success');
-            await refreshData();
+            await refreshData(true);
           } else {
             showMessage(data.message || '重新處理失敗', 'error');
           }
@@ -664,13 +670,13 @@
       }
 
       // 重新整理數據
-      async function refreshData() {
-        await Promise.all([loadUserInfo(), loadOrders()]);
+      async function refreshData(forceSync = false) {
+        await Promise.all([loadUserInfo(), loadOrders(forceSync)]);
       }
 
       // 頁面載入時初始化
       document.addEventListener('DOMContentLoaded', function () {
-        refreshData();
+        refreshData(false);
       });
     </script>
   </body>

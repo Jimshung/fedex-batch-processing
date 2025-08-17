@@ -8,14 +8,13 @@ function checkConfig() {
   const requiredConfigs = [
     { name: 'SHOPIFY_SHOP_NAME', value: config.shopify.shopName },
     { name: 'SHOPIFY_ACCESS_TOKEN', value: config.shopify.accessToken },
-    { name: 'GOOGLE_SHEET_ID', value: config.google.sheetId },
-    {
-      name: 'GOOGLE_SERVICE_ACCOUNT_KEY_PATH',
-      value: config.google.serviceAccountKeyPath,
-    },
     { name: 'FEDEX_CLIENT_ID', value: config.fedex.clientId },
     { name: 'FEDEX_CLIENT_SECRET', value: config.fedex.clientSecret },
     { name: 'FEDEX_ACCOUNT_NUMBER', value: config.fedex.accountNumber },
+    { name: 'GOOGLE_CLIENT_ID', value: config.google.clientId },
+    { name: 'GOOGLE_CLIENT_SECRET', value: config.google.clientSecret },
+    { name: 'SESSION_SECRET', value: config.session.secret },
+    { name: 'JWT_SECRET', value: config.jwt.secret },
   ];
 
   let allValid = true;
