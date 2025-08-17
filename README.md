@@ -19,76 +19,83 @@
 
 ## 🏗️ 系統架構
 
-### 雙重架構：Node.js 主體 + Google Apps Script 輔助
+### 現代化 Node.js Web 應用程式
 
-**Node.js Web 應用程式（主要）：**
+**核心功能：**
 
-- 🌐 Web 認證界面
-- 📊 訂單管理儀表板
-- 🔄 API 服務端點
+- 🌐 Web 認證界面（Google OAuth 2.0）
+- 📊 智能訂單管理儀表板
+- 🔄 RESTful API 服務端點
 - 📈 即時統計資訊
+- 🧠 智能同步機制
 
-**Google Apps Script（輔助）：**
+### 核心設計：智能訂單管理系統
 
-- ⏰ 自動化數據同步
-- 📋 Google Sheets 整合
+我們實現了一個智能的訂單管理系統，具備本地文件存儲和智能同步機制。
 
-### 核心設計：升級的 Google Sheet
+#### 智能同步策略
 
-我們將 Google Sheet 從單純的「數據列表」升級為具備狀態的「互動式儀表板」。
+系統採用多層次的智能同步策略，確保數據新鮮度與性能的最佳平衡：
 
-#### 新的欄位結構
+**同步觸發條件：**
 
-| A: 核准 | B: 處理狀態 | C: FedEx 追蹤號碼 | D: 備註/錯誤訊息      | E: 訂單編號 | F: 客戶名稱   | G: 處理後地址1            |
-| :------ | :---------- | :---------------- | :-------------------- | :---------- | :------------ | :------------------------ |
-| `[ ]`   | `待審核`    |                   |                       | 89760       | KF            | 3 CUSCADEN WALK #11-01    |
-| `[✓]`   | `已完成`    | `773123456789`    |                       | 89722       | ChanChek Chee | 150 Gul Circle            |
-| `[ ]`   | `失敗`      |                   | `Invalid postal code` | 89716       | Keng YongTeo  | 87 COMPASSVALE BOW #02-26 |
+- 🔄 **強制同步**：用戶手動觸發
+- ⏰ **時間間隔**：最小 1 分鐘，最大 30 分鐘
+- 📊 **數量變化**：檢測訂單數量變化
+- 🧠 **自適應間隔**：根據訂單數量動態調整
 
-## 🔄 優雅的工作流程三部曲
+**自適應同步間隔：**
+| 訂單數量 | 同步間隔 | 邏輯 |
+|----------|----------|------|
+| 0 訂單 | 10分鐘 | 無訂單時降低頻率 |
+| 1-9 訂單 | 8分鐘 | 少量訂單，適中頻率 |
+| 10-49 訂單 | 5分鐘 | 中等訂單，正常頻率 |
+| 50-99 訂單 | 3分鐘 | 較多訂單，提高頻率 |
+| 100+ 訂單 | 2分鐘 | 大量訂單，最高頻率 |
 
-### 第一步：每日自動化「新增訂單」
+## 🔄 智能工作流程
 
-**執行者：** `fetch-shopify-orders-job`（由 Cloud Scheduler 每日觸發）
+### 第一步：智能訂單同步
 
-**升級邏輯：**
+**執行者：** 智能同步系統（自動觸發）
 
-- 腳本不再是「清空並寫入」，而是變得更聰明
-- 先讀取 Google Sheet 中已存在的訂單編號
-- 從 Shopify 獲取所有未出貨訂單
-- 只將 Google Sheet 中不存在的「新訂單」附加到表格最下方
-- 對於每一筆新增的訂單，自動將「處理狀態」設為「待審核」
+**智能邏輯：**
 
-**Serena 的體驗：** 每天早上，她打開 Google Sheet，舊的訂單（無論是已完成還是失敗的）都還在，而新的待辦事項會自動出現在列表下方，狀態清晰，一目了然。
+- 🧠 **自適應同步**：根據訂單數量動態調整同步頻率
+- 📊 **變化檢測**：自動檢測訂單數量變化
+- ⏰ **時間控制**：避免過於頻繁的 API 調用
+- 💾 **本地優先**：大部分請求直接讀取本地文件，響應極快
+
+**Serena 的體驗：** 系統會智能地從 Shopify 同步最新訂單，同時保持極快的響應速度。她可以隨時查看最新的訂單狀態，無需等待。
 
 ### 第二步：Serena 的「檢視與核准」
 
-**執行者：** Serena（手動操作）
+**執行者：** Serena（Web 界面操作）
 
 **操作流程：**
 
-1. Serena 檢視所有狀態為「待審核」的訂單
-2. 她可以直接在 Google Sheet 上修改任何她認為需要調整的欄位（例如處理後地址1或總金額）
-3. 對於確認無誤的訂單，她只需勾選 A 欄的「核准」核取方塊
-4. 她可以一次勾選多筆
+1. Serena 登入 Web 儀表板，查看所有待審核訂單
+2. 她可以直接在界面上修改任何需要調整的欄位（例如地址或金額）
+3. 對於確認無誤的訂單，她可以選擇單個或多個訂單進行處理
+4. 系統提供即時的訂單狀態和統計信息
 
-**Serena 的體驗：** 操作直觀，就像在處理待辦事項清單。她可以完全掌控最終送出給 FedEx 的資料。
+**Serena 的體驗：** 現代化的 Web 界面，操作直觀，響應迅速。她可以完全掌控最終送出給 FedEx 的資料。
 
 ### 第三步：一鍵「觸發已核准訂單」
 
-**執行者：** Serena 點擊按鈕，觸發後端的處理服務
+**執行者：** Serena 點擊按鈕，觸發智能處理服務
 
-**升級邏輯：**
+**智能處理邏輯：**
 
-1. 處理服務被觸發後，會去讀取整個 Google Sheet
-2. 篩選出所有「核准」欄被勾選，且「處理狀態」不是「處理中」或「已完成」的訂單
+1. 處理服務被觸發後，會讀取本地訂單數據
+2. 篩選出所有已核准且狀態不是「處理中」或「已完成」的訂單
 3. 對於每一筆篩選出來的訂單，執行以下原子操作：
-   - **立即回寫狀態：** 先將該訂單的「處理狀態」更新為「處理中」
-   - **呼叫 FedEx API：** 將該列的資料傳送給 FedEx API
-   - **處理成功：** 如果 API 成功，則再次回寫 Google Sheet，將「處理狀態」更新為「已完成」，並填上 FedEx 追蹤號碼
-   - **處理失敗：** 如果 API 失敗，則將「處理狀態」更新為「失敗」，並將 FedEx 回傳的錯誤訊息填入「備註/錯誤訊息」欄
+   - **立即更新狀態：** 先將該訂單的狀態更新為「處理中」
+   - **呼叫 FedEx API：** 將訂單資料傳送給 FedEx API
+   - **處理成功：** 如果 API 成功，則更新狀態為「已完成」，並記錄 FedEx 追蹤號碼
+   - **處理失敗：** 如果 API 失敗，則更新狀態為「失敗」，並記錄錯誤訊息
 
-**Serena 的體驗：** 她點擊按鈕後，會看到她勾選的訂單狀態從「待審核」變成「處理中」，幾秒後再變成「已完成」（並出現追蹤號碼）或「失敗」（並出現原因）。整個過程具備即時的視覺反饋，讓她清楚地知道系統正在做什麼，以及結果如何。
+**Serena 的體驗：** 她點擊按鈕後，會看到選中的訂單狀態即時更新，從「待審核」變成「處理中」，然後變成「已完成」（顯示追蹤號碼）或「失敗」（顯示錯誤原因）。整個過程具備即時的視覺反饋和詳細的處理結果。
 
 ## 🚀 快速開始
 
@@ -172,11 +179,12 @@ chmod +x deploy-simple.sh
 
 - `GET /health` - 健康檢查（無需認證）
 - `GET /api/user` - 獲取用戶信息
-- `GET /api/orders` - 獲取所有訂單數據
-- `GET /api/stats` - 獲取處理統計資訊
+- `GET /api/orders` - 獲取所有訂單數據（智能同步）
+- `GET /api/orders?forceSync=true` - 強制同步訂單數據
+- `GET /api/sync-status` - 獲取同步狀態信息
+- `POST /api/sync-orders` - 手動同步訂單
 - `POST /api/process-approved-orders` - 處理已核准訂單
 - `POST /api/retry-failed-orders` - 重新處理失敗訂單
-- `GET /api/processed-orders` - 獲取已處理訂單（供 Google Apps Script 使用）
 
 ### 🔒 認證與授權
 
@@ -189,10 +197,11 @@ chmod +x deploy-simple.sh
 
 ### 核心服務
 
-- **`googleSheetService.js`** - Google Sheets 互動服務
 - **`shopifyService.js`** - Shopify API 整合
 - **`fedexService.js`** - FedEx API 整合
-- **`orderProcessingService.js`** - 訂單處理邏輯
+- **`orderProcessingService.js`** - 訂單處理業務邏輯
+- **`orderFileService.js`** - 本地訂單文件管理
+- **`syncHelper.js`** - 智能同步機制
 - **`server.js`** - HTTP API 伺服器
 
 ### 狀態管理
@@ -208,11 +217,11 @@ chmod +x deploy-simple.sh
 
 ### 每日工作流程
 
-1. **早上 9:00** - 打開 Google Sheet，查看新加入的待審核訂單
+1. **早上 9:00** - 登入 Web 儀表板，查看智能同步的最新訂單
 2. **上午工作時間** - 檢視訂單詳情，必要時修改地址或金額
-3. **下午 2:00** - 勾選確認無誤的訂單
-4. **下午 2:05** - 點擊 Web 儀表板的「處理已核准訂單」按鈕
-5. **下午 2:10** - 查看處理結果，處理失敗的訂單可以修正後重新處理
+3. **下午 2:00** - 選擇確認無誤的訂單
+4. **下午 2:05** - 點擊「處理已核准訂單」按鈕
+5. **下午 2:10** - 查看即時處理結果，失敗的訂單可以修正後重新處理
 
 ### 即時反饋
 
@@ -220,6 +229,8 @@ chmod +x deploy-simple.sh
 - ❌ 處理失敗：立即看到錯誤原因
 - 🔄 處理中：即時狀態更新
 - 📊 統計資訊：一目了然的處理進度
+- 🧠 智能同步：自動檢測數據變化，保持最新狀態
+- ⚡ 快速響應：本地文件讀取，毫秒級響應
 
 ## 🔒 安全性
 
@@ -235,14 +246,19 @@ chmod +x deploy-simple.sh
 SHOPIFY_SHOP_NAME=your-shop.myshopify.com
 SHOPIFY_ACCESS_TOKEN=your-access-token
 
-# Google Sheets 設定
-GOOGLE_SHEET_ID=your-sheet-id
-GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./gcp-service-account.json
-
 # FedEx 設定
 FEDEX_CLIENT_ID=your-fedex-client-id
 FEDEX_CLIENT_SECRET=your-fedex-client-secret
 FEDEX_ACCOUNT_NUMBER=your-fedex-account-number
+
+# Google OAuth 2.0 設定
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+GOOGLE_CALLBACK_URL=https://your-domain.com/auth/google/callback
+
+# Session 和 JWT 設定
+SESSION_SECRET=your-session-secret-key
+JWT_SECRET=your-jwt-secret-key
 ```
 
 ## 🤝 貢獻
