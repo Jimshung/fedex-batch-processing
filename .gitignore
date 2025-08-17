@@ -51,3 +51,4 @@ test-direct.http
 # 其他敏感文件
 *.secret
 secrets/
+cookies.txt

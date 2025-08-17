@@ -247,16 +247,24 @@
           </div>
           <div style="text-align: right">
             <div id="userInfo" style="margin-bottom: 10px; opacity: 0.9"></div>
-            <a
-              href="/auth/logout"
+            <button
+              onclick="logout()"
               style="
+                background: none;
+                border: none;
                 color: rgba(255, 255, 255, 0.8);
-                text-decoration: none;
                 font-size: 0.9em;
+                cursor: pointer;
+                padding: 8px 12px;
+                border-radius: 4px;
+                transition: all 0.2s ease;
               "
+              onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+              onmouseout="this.style.backgroundColor='transparent'"
+              id="logoutBtn"
             >
               🚪 登出
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -672,6 +680,73 @@
       // 重新整理數據
       async function refreshData(forceSync = false) {
         await Promise.all([loadUserInfo(), loadOrders(forceSync)]);
+      }
+
+      // 登出功能
+      async function logout() {
+        const btn = document.getElementById('logoutBtn');
+        const originalText = btn.innerHTML;
+
+        // 確認對話框
+        if (!confirm('確定要登出嗎？')) {
+          return;
+        }
+
+        // 顯示載入狀態
+        btn.innerHTML = '🔄 登出中...';
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+
+        try {
+          // 清除本地狀態
+          showMessage('正在登出...', 'info');
+
+          // 清除本地存儲（如果有的話）
+          localStorage.clear();
+          sessionStorage.clear();
+
+          // 清除開發環境的登出標記（如果存在）
+          document.cookie =
+            'dev_logged_out=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+          // 發送登出請求
+          const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Cache-Control': 'no-cache',
+              Pragma: 'no-cache',
+            },
+          });
+
+          const data = await response.json();
+          console.log('登出響應:', data);
+
+          if (response.ok && data.success) {
+            showMessage(
+              '登出成功，正在重新導向到 Bened Biomedical...',
+              'success'
+            );
+            console.log('準備重新導向到:', 'https://www.benedbiomed.com/home');
+
+            // 延遲一下讓用戶看到成功訊息
+            setTimeout(() => {
+              console.log('執行重新導向...');
+              // 使用 replace 而不是 href，防止用戶使用後退按鈕
+              window.location.replace('https://www.benedbiomed.com/home');
+            }, 1000);
+          } else {
+            throw new Error(data.message || '登出失敗');
+          }
+        } catch (error) {
+          console.error('登出失敗:', error);
+          showMessage('登出失敗，請重試', 'error');
+
+          // 恢復按鈕狀態
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        }
       }
 
       // 頁面載入時初始化

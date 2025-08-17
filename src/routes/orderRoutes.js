@@ -10,6 +10,35 @@ const syncHelper = require('../utils/syncHelper');
 const orderProcessingService = new OrderProcessingService();
 
 /**
+ * 用戶資訊 API
+ */
+router.get(
+  '/user',
+  ...createProtectedRoute((req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+      res.json({
+        success: true,
+        user: {
+          email: req.user.email,
+          name: req.user.name,
+          avatar: req.user.avatar,
+        },
+      });
+    } else {
+      // 本地開發環境提供模擬用戶信息
+      res.json({
+        success: true,
+        user: {
+          email: 'dev@benedbiomed.com',
+          name: '開發者',
+          avatar: '',
+        },
+      });
+    }
+  })
+);
+
+/**
  * 處理已核准訂單
  */
 router.post(

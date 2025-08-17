@@ -7,7 +7,12 @@ const { requireAuth, requireBenedbiomed } = require('../middleware/auth');
  * @returns {Array} 中間件陣列
  */
 function getAuthMiddleware(requireProductionAuth = true) {
-  if (process.env.NODE_ENV === 'production' && requireProductionAuth) {
+  // 在本地開發環境中，我們也需要執行認證中間件來檢查登出狀態
+  if (process.env.NODE_ENV !== 'production') {
+    return [requireAuth]; // 本地環境只檢查 requireAuth，不檢查 requireBenedbiomed
+  }
+
+  if (requireProductionAuth) {
     return [requireAuth, requireBenedbiomed];
   }
   return [];
