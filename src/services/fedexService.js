@@ -8,7 +8,8 @@ const logger = require('../utils/logger');
 
 class FedExService {
   constructor() {
-    this.baseUrl = 'https://apis-sandbox.fedex.com'; // 測試環境，生產環境使用 https://apis.fedex.com
+    // 從配置讀取 API 端點
+    this.baseUrl = config.fedex.apiBaseUrl;
     this.accessToken = null;
     this.tokenExpiry = null;
   }
@@ -49,80 +50,117 @@ class FedExService {
   }
 
   /**
-   * 上傳電子貿易文件 (ETD) - 暫時使用模擬模式
-   * @param {string[]} documentPaths 文件路徑陣列
-   * @param {Object} orderData 訂單資料（用於設定目的地國家）
+   * 準備商業發票資料
+   * @param {Object} orderData 訂單資料
+   * @param {Object} fileReferences 文件引用（信頭和簽名）
+   * @returns {Object} 商業發票配置
+   */
+  prepareCommercialInvoice(orderData, fileReferences = {}) {
+    const countryCode = orderData.country_code || 'US';
+
+    // 根據國家代碼設定不同的商業發票配置
+    let commercialInvoice = {
+      originatorName: 'Bened Life',
+      paymentTerms: 'Prepaid',
+      termsOfSale: 'FCA',
+      shipmentPurpose: 'COMMERCIAL',
+      specialInstructions: 'Handle with care. Temperature sensitive product.',
+      emailNotificationDetail: {
+        emailAddress: 'shipping@benedbiomed.com',
+        type: 'EMAILED',
+        recipientType: 'SHIPPER',
+      },
+    };
+
+    // 如果有信頭和簽名引用，加入商業發票配置
+    if (fileReferences.letterheadReference) {
+      commercialInvoice.letterheadReference =
+        fileReferences.letterheadReference;
+    }
+
+    if (fileReferences.signatureReference) {
+      commercialInvoice.signatureReference = fileReferences.signatureReference;
+    }
+
+    // 根據國家代碼調整特殊配置
+    if (countryCode === 'PH') {
+      // 菲律賓特殊配置
+      commercialInvoice.comments = [
+        'Neuralli MP - Medical Device',
+        'For personal use only',
+        'Contains probiotics',
+      ];
+      commercialInvoice.shipmentPurpose = 'COMMERCIAL';
+    } else if (countryCode === 'NZ') {
+      // 紐西蘭特殊配置
+      commercialInvoice.comments = [
+        'Neuralli MP - Dietary Supplement',
+        'Contains beneficial bacteria',
+        'For personal consumption',
+      ];
+      commercialInvoice.shipmentPurpose = 'COMMERCIAL';
+    }
+
+    return commercialInvoice;
+  }
+
+  /**
+   * 上傳信頭和簽名文件到 FedEx
+   * @param {string} letterheadPath 信頭文件路徑
+   * @param {string} signaturePath 簽名文件路徑
    * @returns {Promise<Object>} 上傳結果
    */
-  async uploadEtdDocuments(documentPaths, orderData = null) {
+  async uploadLetterheadAndSignature(letterheadPath, signaturePath) {
     try {
-      // 暫時使用模擬模式，因為 ETD API 端點需要特殊權限或生產環境
-      logger.warning(
-        `ETD 文件上傳功能暫時使用模擬模式 - 端點 /documents/v1/etds/upload 返回 404`
-      );
-      logger.info(`這可能是因為測試環境限制或需要特殊的 API 權限`);
-
-      const destinationCountry = orderData?.country_code || 'US';
-      logger.info(
-        `準備上傳的文件: ${documentPaths.join(', ')} (目的地: ${destinationCountry})`
-      );
-
-      // 模擬成功上傳
-      const documentReferenceNumber = `MOCK_DOC_${Date.now()}_${destinationCountry}`;
-      logger.success(
-        `模擬成功上傳 ETD 文件，參考號: ${documentReferenceNumber}`
-      );
-
-      return {
-        success: true,
-        documentReferenceNumber,
-        error: null,
-      };
-
-      /* 真實 API 實作（暫時註解）
-      // 使用正確的 FedEx ETD API 端點
-      logger.info(`開始上傳 ETD 文件到 FedEx API`);
+      logger.info('開始上傳信頭和簽名文件到 FedEx');
 
       const accessToken = await this.getAccessToken();
 
       // 建立 FormData 物件
       const formData = new FormData();
 
-      // 加入必要的請求參數
-      const metaData = {
-        etdType: 'COMMERCIAL_INVOICE',
-        uploaderId: config.fedex.accountNumber,
-        shipTimestamp: new Date().toISOString(),
-        documentType: 'COMMERCIAL_INVOICE',
-        documentReference: `DOC_${Date.now()}`,
-        originCountryCode: 'US',
-        destinationCountryCode: orderData?.country_code || 'US',
-      };
-
-      formData.append('meta', JSON.stringify(metaData));
-
-      // 加入文件
-      for (const documentPath of documentPaths) {
+      // 加入信頭文件
+      if (letterheadPath) {
         try {
-          const fileContent = await fs.readFile(documentPath);
-          const fileName = path.basename(documentPath);
-          
-          // 檢查文件是否存在
-          logger.info(`準備上傳文件: ${fileName}`);
-          
-          formData.append('documents', fileContent, {
-            filename: fileName,
-            contentType: 'application/pdf',
+          const letterheadContent = await fs.readFile(letterheadPath);
+          const letterheadFileName = path.basename(letterheadPath);
+
+          logger.info(`準備上傳信頭文件: ${letterheadFileName}`);
+
+          formData.append('letterhead', letterheadContent, {
+            filename: letterheadFileName,
+            contentType: 'image/png', // 或 'image/jpeg', 'image/gif'
           });
         } catch (fileError) {
-          logger.error(`讀取文件失敗: ${documentPath}, 錯誤: ${fileError.message}`);
-          throw new Error(`無法讀取文件: ${documentPath}`);
+          logger.error(
+            `讀取信頭文件失敗: ${letterheadPath}, 錯誤: ${fileError.message}`
+          );
         }
       }
 
-      // 發送請求 - 使用正確的端點
+      // 加入簽名文件
+      if (signaturePath) {
+        try {
+          const signatureContent = await fs.readFile(signaturePath);
+          const signatureFileName = path.basename(signaturePath);
+
+          logger.info(`準備上傳簽名文件: ${signatureFileName}`);
+
+          formData.append('signature', signatureContent, {
+            filename: signatureFileName,
+            contentType: 'image/png', // 或 'image/jpeg', 'image/gif'
+          });
+        } catch (fileError) {
+          logger.error(
+            `讀取簽名文件失敗: ${signaturePath}, 錯誤: ${fileError.message}`
+          );
+        }
+      }
+
+      // 發送請求到 FedEx 文件上傳端點
+      // 注意：這個端點可能需要根據實際的 FedEx API 文檔調整
       const response = await axios.post(
-        `${this.baseUrl}/documents/v1/etds/upload`,
+        `${this.baseUrl}/documents/v1/letterhead-signature/upload`,
         formData,
         {
           headers: {
@@ -133,40 +171,33 @@ class FedExService {
         }
       );
 
-      // 取得文件參考號
-      const documentReferenceNumber = response.data.output?.uploadId || response.data.output?.documentReference;
-
-      logger.success(`成功上傳 ETD 文件，參考號: ${documentReferenceNumber}`);
+      logger.success('成功上傳信頭和簽名文件');
 
       return {
         success: true,
-        documentReferenceNumber,
+        letterheadReference: response.data.output?.letterheadReference,
+        signatureReference: response.data.output?.signatureReference,
         error: null,
       };
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
-      logger.error(`上傳 ETD 文件失敗: ${errorMessage}`);
-      
-      // 添加更詳細的錯誤日誌
-      if (error.response) {
-        logger.error(`HTTP 狀態碼: ${error.response.status}`);
-        logger.error(`響應標頭: ${JSON.stringify(error.response.headers)}`);
+      logger.error(`上傳信頭和簽名文件失敗: ${errorMessage}`);
+
+      // 如果 API 端點不存在，記錄警告並繼續
+      if (error.response?.status === 404) {
+        logger.warning('信頭和簽名文件上傳端點不存在，將使用預設配置');
+        return {
+          success: true,
+          letterheadReference: null,
+          signatureReference: null,
+          error: null,
+        };
       }
 
       return {
         success: false,
-        documentReferenceNumber: null,
-        error: errorMessage,
-      };
-    }
-    */
-    } catch (error) {
-      const errorMessage = this.extractErrorMessage(error);
-      logger.error(`上傳 ETD 文件失敗: ${errorMessage}`);
-
-      return {
-        success: false,
-        documentReferenceNumber: null,
+        letterheadReference: null,
+        signatureReference: null,
         error: errorMessage,
       };
     }
@@ -175,32 +206,36 @@ class FedExService {
   /**
    * 處理訂單出貨
    * @param {Object} orderData 訂單資料
-   * @param {string[]} documentPaths 文件路徑陣列
+   * @param {string[]} documentPaths 文件路徑陣列（保留參數以維持相容性）
    * @returns {Promise<Object>} 出貨結果
    */
   async processOrderShipment(orderData, documentPaths = []) {
     try {
       logger.info(`處理訂單出貨，訂單號: ${orderData.order_number}`);
 
-      // 1. 上傳電子貿易文件
-      let documentReference = null;
+      // 記錄文件路徑（用於調試）
       if (documentPaths && documentPaths.length > 0) {
-        const uploadResult = await this.uploadEtdDocuments(
-          documentPaths,
-          orderData
+        logger.info(
+          `訂單 ${orderData.order_number} 附加文件: ${documentPaths.join(', ')}`
         );
-        if (uploadResult.success) {
-          documentReference = uploadResult.documentReferenceNumber;
-        } else {
-          logger.warning(`上傳文件失敗，將繼續處理出貨: ${uploadResult.error}`);
-        }
       }
 
-      // 2. 創建貨運請求
-      const shipmentResult = await this.createShipment(
-        orderData,
-        documentReference
+      // 1. 上傳信頭和簽名文件（如果存在）
+      let letterheadReference = null;
+      let signatureReference = null;
+
+      // 在 Production 環境中，信頭和簽名已經在 FedEx 偏好設定中配置
+      // 不需要通過 API 上傳文件，直接使用商業發票配置
+      logger.info('Production 環境：信頭和簽名已在 FedEx 偏好設定中配置');
+      logger.info(
+        '將直接使用 commercialInvoice 配置，FedEx 會自動套用偏好設定'
       );
+
+      // 2. 創建貨運請求（包含信頭和簽名引用）
+      const shipmentResult = await this.createShipment(orderData, {
+        letterheadReference,
+        signatureReference,
+      });
       return shipmentResult;
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
@@ -220,10 +255,10 @@ class FedExService {
   /**
    * 創建貨運標籤
    * @param {Object} orderData 訂單資料
-   * @param {string} documentReferenceNumber 文件參考號
+   * @param {Object} fileReferences 文件引用（信頭和簽名）
    * @returns {Promise<Object>} 創建結果
    */
-  async createShipment(orderData, documentReferenceNumber = null) {
+  async createShipment(orderData, fileReferences = {}) {
     try {
       // 真實 API 呼叫
       logger.info(
@@ -235,7 +270,7 @@ class FedExService {
       // 準備 FedEx API 請求數據
       const shipmentRequest = this.prepareShipmentRequest(
         orderData,
-        documentReferenceNumber
+        fileReferences
       );
 
       const response = await axios.post(
@@ -279,10 +314,10 @@ class FedExService {
   /**
    * 準備貨運請求數據
    * @param {Object} orderData 訂單資料
-   * @param {string} documentReferenceNumber 文件參考號
+   * @param {Object} fileReferences 文件引用（信頭和簽名）
    * @returns {Object} 貨運請求數據
    */
-  prepareShipmentRequest(orderData, documentReferenceNumber = null) {
+  prepareShipmentRequest(orderData, fileReferences = {}) {
     // 解析地址資訊
     const streetLines = [
       orderData.processed_address_1,
@@ -320,6 +355,11 @@ class FedExService {
             countryCode: 'SG',
           },
         },
+        // 加入商業發票配置
+        commercialInvoice: this.prepareCommercialInvoice(
+          orderData,
+          fileReferences
+        ),
         recipients: [
           {
             contact: {
@@ -391,20 +431,7 @@ class FedExService {
       labelResponseOptions: 'URL_ONLY',
     };
 
-    // 如果有文件參考號，加入電子貿易文件資訊
-    if (documentReferenceNumber) {
-      requestData.requestedShipment.customsClearanceDetail.documentContent =
-        'ELECTRONIC_TRADE_DOCUMENTS';
-      requestData.requestedShipment.customsClearanceDetail.etdDetail = {
-        requestedDocumentTypes: ['COMMERCIAL_INVOICE'],
-        documentReferences: [
-          {
-            documentType: 'COMMERCIAL_INVOICE',
-            documentReference: documentReferenceNumber,
-          },
-        ],
-      };
-    }
+    // 移除 ETD 相關配置，因為我們使用 commercialInvoice 配置
 
     return requestData;
   }

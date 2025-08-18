@@ -22,6 +22,8 @@ module.exports = {
     secret: process.env.JWT_SECRET,
   },
   fedex: {
+    apiBaseUrl:
+      process.env.FEDEX_API_BASE_URL || 'https://apis-sandbox.fedex.com',
     clientId: process.env.FEDEX_CLIENT_ID,
     clientSecret: process.env.FEDEX_CLIENT_SECRET,
     accountNumber: process.env.FEDEX_ACCOUNT_NUMBER,
