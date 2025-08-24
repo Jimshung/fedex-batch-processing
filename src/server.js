@@ -60,7 +60,7 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? ['https://shopify-webhook-handler-*.run.app', 'https://*.run.app']
+        ? ['https://intl-shipping-serena-*.run.app', 'https://*.run.app']
         : true, // 本地開發允許所有 origins
     credentials: true, // 允許 cookies
   })

@@ -6,9 +6,9 @@ set -e
 
 echo "🎯 開始 Production 環境部署到 GCP..."
 
-PROJECT_ID=$(gcloud config get-value project 2>/dev/null || echo "shopify-webhook-handler")
+PROJECT_ID=$(gcloud config get-value project 2>/dev/null || echo "intl-shipping-serena")
 REGION="asia-east1"
-SERVICE_NAME="shopify-webhook-handler-production"
+SERVICE_NAME="intl-shipping-serena-production"
 
 echo "📍 專案: $PROJECT_ID"
 echo "📍 地區: $REGION"

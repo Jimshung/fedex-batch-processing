@@ -37,7 +37,7 @@
 
    ```bash
    gcloud auth login
-   gcloud config set project shopify-webhook-handler-467707
+   gcloud config set project intl-shipping-serena
    ```
 
 3. **確保 .env 檔案完整**
@@ -105,7 +105,7 @@ gcloud services enable cloudbuild.googleapis.com
 
 1. **查看 Cloud Run 服務**
    - 訪問：https://console.cloud.google.com/run
-   - 選擇專案：shopify-webhook-handler-467707
+   - 選擇專案：intl-shipping-serena
    - 地區：asia-east1
 
 2. **查看建置歷史**
