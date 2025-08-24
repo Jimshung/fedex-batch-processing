@@ -111,9 +111,8 @@ class SyncHelper {
    */
   async getCurrentOrderCount() {
     try {
-      const OrderFileService = require('../services/orderFileService');
-      const orderFileService = new OrderFileService();
-      const orders = await orderFileService.readOrders();
+      const databaseService = require('../services/databaseService');
+      const orders = await databaseService.getAllOrders(1000);
       return orders.length;
     } catch (error) {
       logger.error(`獲取訂單數量失敗: ${error.message}`);

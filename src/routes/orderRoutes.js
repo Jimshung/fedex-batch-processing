@@ -112,10 +112,9 @@ router.get(
         await syncHelper.updateSyncInfo(orderCount);
       }
 
-      // 從本地文件讀取訂單數據
-      const OrderFileService = require('../services/orderFileService');
-      const orderFileService = new OrderFileService();
-      const allOrders = await orderFileService.readOrders();
+      // 從 Firestore 讀取訂單數據
+      const databaseService = require('../services/databaseService');
+      const allOrders = await databaseService.getAllOrders(1000);
 
       if (allOrders.length === 0) {
         return res.json({
@@ -162,7 +161,7 @@ router.post(
 
       res.json({
         success: true,
-        message: '訂單同步完成，已更新本地 orders.json',
+        message: '訂單同步完成，已更新 Firestore 資料庫',
         orderCount,
         syncInfo: await syncHelper.getSyncStatus(),
       });

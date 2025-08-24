@@ -1,11 +1,11 @@
 // orderProcessingService.js - 訂單處理業務邏輯
-const OrderFileService = require('./orderFileService');
+const databaseService = require('./databaseService');
 const fedexService = require('./fedexService');
 const logger = require('../utils/logger');
 
 class OrderProcessingService {
   constructor() {
-    this.orderFileService = new OrderFileService();
+    this.databaseService = databaseService;
     this.fedexService = fedexService;
   }
 
@@ -22,7 +22,7 @@ class OrderProcessingService {
 
       // 如果有傳入特定訂單ID，則處理這些訂單
       if (orderIds && orderIds.length > 0) {
-        const allOrders = await this.orderFileService.readOrders();
+        const allOrders = await this.databaseService.getAllOrders(1000);
         ordersToProcess = allOrders.filter(
           (order) =>
             order.order_number &&
@@ -38,7 +38,8 @@ class OrderProcessingService {
         logger.info(`找到 ${ordersToProcess.length} 筆指定訂單進行處理`);
       } else {
         // 否則處理所有已核准且未處理的訂單
-        ordersToProcess = await this.orderFileService.getApprovedOrders();
+        ordersToProcess =
+          await this.databaseService.getOrdersByStatus('approved');
         logger.info(`找到 ${ordersToProcess.length} 筆已核准訂單進行處理`);
       }
 
@@ -83,7 +84,8 @@ class OrderProcessingService {
     try {
       logger.info('開始重新處理失敗訂單');
 
-      const failedOrders = await this.orderFileService.getFailedOrders();
+      const failedOrders =
+        await this.databaseService.getOrdersByStatus('failed');
 
       if (failedOrders.length === 0) {
         return {
@@ -116,21 +118,21 @@ class OrderProcessingService {
   }
 
   /**
-   * 內部方法：處理訂單陣列
-   * @param {Array} orders 訂單陣列
-   * @param {string} processingStatus 處理狀態
-   * @param {string} processingStatusText 處理狀態文字
-   * @returns {Promise<Array>} 處理結果陣列
+   * 處理訂單的核心邏輯
+   * @private
    */
   async _processOrders(orders, processingStatus, processingStatusText) {
     const results = [];
 
     for (const order of orders) {
       try {
-        // 根據國家代碼選擇對應的PDF文件
+        // 根據國家代碼選擇對應的PDF文件（暫時註解）
         let documentPaths = [];
-        const countryCode = order.country_code;
+        const countryCode =
+          order.original_address?.country_code || order.country_code;
 
+        // TODO: 暫時註解 PDF 文件選擇邏輯，專注於 ETD 功能
+        /*
         if (countryCode === 'NZ') {
           documentPaths = ['./documents/Bened_Neuralli MP_Ingredient list.pdf'];
           logger.info(
@@ -146,10 +148,16 @@ class OrderProcessingService {
             `訂單 ${order.order_number} 國家代碼 ${countryCode}，不需要特殊文件`
           );
         }
+        */
+
+        logger.info(
+          `訂單 ${order.order_number} 國家代碼 ${countryCode}，使用 ETD 商業發票`
+        );
 
         // 更新狀態為處理中
-        await this.orderFileService.updateOrder(order.shopify_order_id, {
-          status: processingStatus,
+        await this.databaseService.updateOrderStatus(order.shopify_order_id, {
+          ...order.status,
+          current: processingStatus,
           processing_status: processingStatusText,
         });
 
@@ -161,13 +169,37 @@ class OrderProcessingService {
 
         if (shipmentResult.success) {
           // 出貨成功
-          await this.orderFileService.updateOrder(order.shopify_order_id, {
-            status: 'completed',
-            processing_status: '已完成',
-            fedex_tracking: shipmentResult.trackingNumber,
-            notes_error: '',
-            completed_at: new Date().toISOString(),
-          });
+          const updatedOrder = {
+            ...order,
+            status: {
+              ...order.status,
+              current: 'completed',
+              processing_status: '已完成',
+              fedex_shipment: 'created',
+            },
+            fedex: {
+              tracking_number: shipmentResult.trackingNumber,
+              transaction_id: shipmentResult.transactionId || '',
+              service_type:
+                shipmentResult.serviceType || 'INTERNATIONAL_PRIORITY',
+              service_name:
+                shipmentResult.serviceName || 'International Priority®',
+              ship_datestamp: shipmentResult.shipDatestamp || '',
+              service_category: shipmentResult.serviceCategory || 'EXPRESS',
+              created_at: new Date().toISOString(),
+            },
+            shopify_fulfillment: {
+              ...order.shopify_fulfillment,
+              tracking_number: shipmentResult.trackingNumber,
+              tracking_url: `https://www.fedex.com/fedextrack/?trknbr=${shipmentResult.trackingNumber}`,
+            },
+            timestamps: {
+              ...order.timestamps,
+              completed_at: new Date().toISOString(),
+            },
+          };
+
+          await this.databaseService.upsertOrder(updatedOrder);
 
           results.push({
             orderId: order.shopify_order_id,
@@ -176,12 +208,20 @@ class OrderProcessingService {
           });
         } else {
           // 出貨失敗
-          await this.orderFileService.updateOrder(order.shopify_order_id, {
-            status: 'failed',
-            processing_status: '失敗',
-            notes_error: shipmentResult.error || '未知錯誤',
-            failed_at: new Date().toISOString(),
-          });
+          const updatedOrder = {
+            ...order,
+            status: {
+              ...order.status,
+              current: 'failed',
+              processing_status: '失敗',
+            },
+            timestamps: {
+              ...order.timestamps,
+              failed_at: new Date().toISOString(),
+            },
+          };
+
+          await this.databaseService.upsertOrder(updatedOrder);
 
           results.push({
             orderId: order.shopify_order_id,
@@ -194,12 +234,20 @@ class OrderProcessingService {
           `處理訂單 ${order.shopify_order_id} 失敗: ${error.message}`
         );
 
-        await this.orderFileService.updateOrder(order.shopify_order_id, {
-          status: 'failed',
-          processing_status: '失敗',
-          notes_error: error.message,
-          failed_at: new Date().toISOString(),
-        });
+        const updatedOrder = {
+          ...order,
+          status: {
+            ...order.status,
+            current: 'failed',
+            processing_status: '失敗',
+          },
+          timestamps: {
+            ...order.timestamps,
+            failed_at: new Date().toISOString(),
+          },
+        };
+
+        await this.databaseService.upsertOrder(updatedOrder);
 
         results.push({
           orderId: order.shopify_order_id,

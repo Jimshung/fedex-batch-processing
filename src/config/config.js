@@ -28,5 +28,15 @@ module.exports = {
     clientSecret: process.env.FEDEX_CLIENT_SECRET,
     accountNumber: process.env.FEDEX_ACCOUNT_NUMBER,
   },
+  gcp: {
+    projectId: process.env.GCP_PROJECT_ID,
+    keyFilename: process.env.GCP_KEY_FILENAME || 'gcp-service-account.json',
+    firestore: {
+      collectionPrefix: process.env.FIRESTORE_COLLECTION_PREFIX || '',
+    },
+    storage: {
+      bucketName: process.env.GCS_BUCKET_NAME || 'fedex-documents',
+    },
+  },
   asiaCountries: ['JP', 'KR', 'SG', 'PH', 'AU', 'NZ', 'TH'],
 };

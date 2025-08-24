@@ -2,13 +2,13 @@
 const axios = require('axios');
 const config = require('../config/config');
 const addressSplitter = require('../utils/addressSplitter');
-const OrderFileService = require('./orderFileService');
+const databaseService = require('./databaseService');
 const logger = require('../utils/logger');
 
 class ShopifyService {
   constructor() {
     this.baseUrl = `https://${config.shopify.shopName}.myshopify.com/admin/api/${config.shopify.apiVersion}`;
-    this.orderFileService = new OrderFileService();
+    this.databaseService = databaseService;
   }
 
   async getUnfulfilledOrders(params = {}) {
@@ -208,13 +208,130 @@ class ShopifyService {
       const processedOrders = orders.map((order) =>
         this.processOrderData(order)
       );
-      // 將處理後的訂單更新至本地文件
-      await this.orderFileService.updateOrders(processedOrders);
+      // 將處理後的訂單更新至 Firestore
+      await this.updateOrdersInFirestore(processedOrders);
       return processedOrders;
     } catch (error) {
       logger.error(`取得並處理訂單時發生錯誤: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * 更新訂單到 Firestore
+   * @param {Array} processedOrders 處理後的訂單陣列
+   */
+  async updateOrdersInFirestore(processedOrders) {
+    try {
+      logger.info(`開始更新 ${processedOrders.length} 筆訂單到 Firestore...`);
+
+      // 批次處理訂單
+      const batchSize = 10;
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < processedOrders.length; i += batchSize) {
+        const batch = processedOrders.slice(i, i + batchSize);
+
+        for (const order of batch) {
+          try {
+            // 轉換為 Firestore 格式
+            const firestoreOrder = this.transformToFirestoreFormat(order);
+            await this.databaseService.upsertOrder(firestoreOrder);
+            successCount++;
+          } catch (error) {
+            errorCount++;
+            logger.error(
+              `更新訂單 ${order.shopify_order_id} 失敗: ${error.message}`
+            );
+          }
+        }
+
+        // 批次間稍作延遲
+        if (i + batchSize < processedOrders.length) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+
+      logger.success(
+        `Firestore 更新完成：${successCount} 成功，${errorCount} 失敗`
+      );
+    } catch (error) {
+      logger.error(`更新訂單到 Firestore 失敗: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 轉換訂單資料為 Firestore 格式
+   * @param {Object} order 原始訂單資料
+   * @returns {Object} Firestore 格式的訂單資料
+   */
+  transformToFirestoreFormat(order) {
+    return {
+      // === Shopify 原始資料 ===
+      shopify_order_id: order.shopify_order_id,
+      order_number: order.order_number,
+      customer_name: order.customer_name,
+      customer_email: order.customer_email,
+      phone: order.phone,
+
+      // === 地址資訊 ===
+      original_address: {
+        address1: order.original_address_1 || '',
+        address2: order.original_address_2 || '',
+        city: order.city || '',
+        province: order.province || '',
+        postal_code: order.postal_code || '',
+        country_code: order.country_code || '',
+      },
+
+      // === 處理後地址 ===
+      processed_address: {
+        address1: order.processed_address_1 || '',
+        address2: order.processed_address_2 || '',
+        address3: order.processed_address_3 || '',
+      },
+
+      // === 金額資訊 ===
+      pricing: {
+        original_total: parseFloat(order.original_total_price) || 0,
+        customs_value: order.customs_value || 0,
+        currency: order.currency || 'USD',
+      },
+
+      // === 商品資訊 ===
+      items: order.items || [],
+
+      // === 狀態追蹤 ===
+      status: {
+        current: order.status || 'pending_review',
+        shopify_fulfillment: 'unfulfilled',
+        fedex_shipment: 'not_created',
+      },
+
+      // === FedEx 資訊 ===
+      fedex: null,
+
+      // === Shopify Fulfillment 資訊 ===
+      shopify_fulfillment: {
+        fulfillment_id: null,
+        tracking_number: null,
+        tracking_url: null,
+        status: 'pending',
+        error_message: null,
+        retry_count: 0,
+        last_attempt: null,
+      },
+
+      // === 時間戳記 ===
+      timestamps: {
+        created_at: order.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        completed_at: null,
+        failed_at: null,
+      },
+    };
   }
 
   handleError(error) {
