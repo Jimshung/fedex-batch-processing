@@ -5,10 +5,10 @@ const FormData = require('form-data');
 const path = require('path');
 const config = require('../config/config');
 const logger = require('../utils/logger');
+const { splitAddress } = require('../utils/addressSplitter');
 
 class FedExService {
   constructor() {
-    // 從配置讀取 API 端點
     this.baseUrl = config.fedex.apiBaseUrl;
     this.accessToken = null;
     this.tokenExpiry = null;
@@ -16,7 +16,6 @@ class FedExService {
 
   async getAccessToken() {
     try {
-      // 檢查是否已有有效的 token
       if (
         this.accessToken &&
         this.tokenExpiry &&
@@ -33,9 +32,7 @@ class FedExService {
           client_secret: config.fedex.clientSecret,
         },
         {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         }
       );
 
@@ -50,161 +47,109 @@ class FedExService {
   }
 
   /**
-   * 準備商業發票資料
-   * @param {Object} orderData 訂單資料
-   * @param {Object} fileReferences 文件引用（信頭和簽名）
-   * @returns {Object} 商業發票配置
-   */
-  prepareCommercialInvoice(orderData, fileReferences = {}) {
-    const countryCode = orderData.country_code || 'US';
-
-    // 根據國家代碼設定不同的商業發票配置
-    let commercialInvoice = {
-      originatorName: 'Bened Life',
-      paymentTerms: 'Prepaid',
-      termsOfSale: 'FCA',
-      shipmentPurpose: 'COMMERCIAL',
-      specialInstructions: 'Handle with care. Temperature sensitive product.',
-      emailNotificationDetail: {
-        emailAddress: 'shipping@benedbiomed.com',
-        type: 'EMAILED',
-        recipientType: 'SHIPPER',
-      },
-    };
-
-    // 如果有信頭和簽名引用，加入商業發票配置
-    if (fileReferences.letterheadReference) {
-      commercialInvoice.letterheadReference =
-        fileReferences.letterheadReference;
-    }
-
-    if (fileReferences.signatureReference) {
-      commercialInvoice.signatureReference = fileReferences.signatureReference;
-    }
-
-    // 根據國家代碼調整特殊配置
-    if (countryCode === 'PH') {
-      // 菲律賓特殊配置
-      commercialInvoice.comments = [
-        'Neuralli MP - Medical Device',
-        'For personal use only',
-        'Contains probiotics',
-      ];
-      commercialInvoice.shipmentPurpose = 'COMMERCIAL';
-    } else if (countryCode === 'NZ') {
-      // 紐西蘭特殊配置
-      commercialInvoice.comments = [
-        'Neuralli MP - Dietary Supplement',
-        'Contains beneficial bacteria',
-        'For personal consumption',
-      ];
-      commercialInvoice.shipmentPurpose = 'COMMERCIAL';
-    }
-
-    return commercialInvoice;
-  }
-
-  /**
-   * 上傳信頭和簽名文件到 FedEx
-   * @param {string} letterheadPath 信頭文件路徑
-   * @param {string} signaturePath 簽名文件路徑
+   * 上傳圖片文件到 FedEx
+   * @param {string} imagePath 圖片文件路徑
+   * @param {string} imageType 圖片類型 ('SIGNATURE' 或 'LETTER_HEAD')
    * @returns {Promise<Object>} 上傳結果
    */
-  async uploadLetterheadAndSignature(letterheadPath, signaturePath) {
+  async uploadImage(imagePath, imageType) {
     try {
-      logger.info('開始上傳信頭和簽名文件到 FedEx');
+      logger.info(`開始上傳圖片文件到 FedEx，類型: ${imageType}`);
 
       const accessToken = await this.getAccessToken();
-
-      // 建立 FormData 物件
+      const imageContent = await fs.readFile(imagePath);
+      const imageFileName = path.basename(imagePath);
       const formData = new FormData();
 
-      // 加入信頭文件
-      if (letterheadPath) {
-        try {
-          const letterheadContent = await fs.readFile(letterheadPath);
-          const letterheadFileName = path.basename(letterheadPath);
+      formData.append('attachment', imageContent, {
+        filename: imageFileName,
+        contentType: this.getContentType(imageFileName),
+      });
 
-          logger.info(`準備上傳信頭文件: ${letterheadFileName}`);
+      const documentMetadata = {
+        document: {
+          referenceId: `BENED-LIFE-${imageType.toUpperCase()}-${Date.now()}`,
+          name: imageFileName,
+          contentType: this.getContentType(imageFileName),
+          meta: {
+            imageType: imageType === 'LETTER_HEAD' ? 'LETTERHEAD' : 'SIGNATURE',
+            imageIndex: imageType === 'LETTER_HEAD' ? 'IMAGE_2' : 'IMAGE_1',
+          },
+        },
+        rules: { workflowName: 'LetterheadSignature' },
+      };
 
-          formData.append('letterhead', letterheadContent, {
-            filename: letterheadFileName,
-            contentType: 'image/png', // 或 'image/jpeg', 'image/gif'
-          });
-        } catch (fileError) {
-          logger.error(
-            `讀取信頭文件失敗: ${letterheadPath}, 錯誤: ${fileError.message}`
-          );
-        }
-      }
+      formData.append('document', JSON.stringify(documentMetadata), {
+        contentType: 'application/json',
+      });
 
-      // 加入簽名文件
-      if (signaturePath) {
-        try {
-          const signatureContent = await fs.readFile(signaturePath);
-          const signatureFileName = path.basename(signaturePath);
+      logger.info(`準備上傳圖片: ${imageFileName} (${imageType})`);
 
-          logger.info(`準備上傳簽名文件: ${signatureFileName}`);
-
-          formData.append('signature', signatureContent, {
-            filename: signatureFileName,
-            contentType: 'image/png', // 或 'image/jpeg', 'image/gif'
-          });
-        } catch (fileError) {
-          logger.error(
-            `讀取簽名文件失敗: ${signaturePath}, 錯誤: ${fileError.message}`
-          );
-        }
-      }
-
-      // 發送請求到 FedEx 文件上傳端點
-      // 注意：這個端點可能需要根據實際的 FedEx API 文檔調整
       const response = await axios.post(
-        `${this.baseUrl}/documents/v1/letterhead-signature/upload`,
+        `${this.baseUrl}/documents/v1/lhsimages/upload`,
         formData,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
             ...formData.getHeaders(),
           },
-          timeout: 30000, // 30 秒超時
+          timeout: 30000,
         }
       );
 
-      logger.success('成功上傳信頭和簽名文件');
+      logger.success(`成功上傳圖片文件: ${imageFileName}`);
 
       return {
         success: true,
-        letterheadReference: response.data.output?.letterheadReference,
-        signatureReference: response.data.output?.signatureReference,
+        imageIndex: response.data.output?.meta?.imageIndex,
         error: null,
       };
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
-      logger.error(`上傳信頭和簽名文件失敗: ${errorMessage}`);
+      logger.error(`上傳圖片文件失敗: ${errorMessage}`);
 
-      // 如果 API 端點不存在，記錄警告並繼續
       if (error.response?.status === 404) {
-        logger.warning('信頭和簽名文件上傳端點不存在，將使用預設配置');
+        logger.warning('圖片上傳端點不存在，將使用預設配置');
         return {
           success: true,
-          letterheadReference: null,
-          signatureReference: null,
+          imageId: null,
+          imageReference: null,
           error: null,
         };
       }
 
       return {
         success: false,
-        letterheadReference: null,
-        signatureReference: null,
+        imageId: null,
+        imageReference: null,
         error: errorMessage,
       };
     }
   }
 
   /**
-   * 處理訂單出貨
+   * 獲取文件內容類型
+   * @param {string} fileName 文件名
+   * @returns {string} 內容類型
+   */
+  getContentType(fileName) {
+    const ext = path.extname(fileName).toLowerCase();
+    switch (ext) {
+      case '.png':
+        return 'image/png';
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.gif':
+        return 'image/gif';
+      default:
+        return 'image/png';
+    }
+  }
+
+  /**
+   * 處理訂單出貨（支援 ETD 功能）
    * @param {Object} orderData 訂單資料
    * @param {string[]} documentPaths 文件路徑陣列（保留參數以維持相容性）
    * @returns {Promise<Object>} 出貨結果
@@ -213,29 +158,14 @@ class FedExService {
     try {
       logger.info(`處理訂單出貨，訂單號: ${orderData.order_number}`);
 
-      // 記錄文件路徑（用於調試）
       if (documentPaths && documentPaths.length > 0) {
         logger.info(
           `訂單 ${orderData.order_number} 附加文件: ${documentPaths.join(', ')}`
         );
       }
 
-      // 1. 上傳信頭和簽名文件（如果存在）
-      let letterheadReference = null;
-      let signatureReference = null;
-
-      // 在 Production 環境中，信頭和簽名已經在 FedEx 偏好設定中配置
-      // 不需要通過 API 上傳文件，直接使用商業發票配置
-      logger.info('Production 環境：信頭和簽名已在 FedEx 偏好設定中配置');
-      logger.info(
-        '將直接使用 commercialInvoice 配置，FedEx 會自動套用偏好設定'
-      );
-
-      // 2. 創建貨運請求（包含信頭和簽名引用）
-      const shipmentResult = await this.createShipment(orderData, {
-        letterheadReference,
-        signatureReference,
-      });
+      logger.info('使用固定的 IMAGE_1 和 IMAGE_2 引用進行貨運建立');
+      const shipmentResult = await this.createShipment(orderData);
       return shipmentResult;
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
@@ -253,25 +183,30 @@ class FedExService {
   }
 
   /**
-   * 創建貨運標籤
+   * 創建貨運標籤（支援 ETD 功能）
    * @param {Object} orderData 訂單資料
-   * @param {Object} fileReferences 文件引用（信頭和簽名）
    * @returns {Promise<Object>} 創建結果
    */
-  async createShipment(orderData, fileReferences = {}) {
+  async createShipment(orderData) {
     try {
-      // 真實 API 呼叫
       logger.info(
         `開始呼叫 FedEx Ship API，訂單編號: ${orderData.order_number}`
       );
 
       const accessToken = await this.getAccessToken();
+      const shipmentRequest = this.prepareShipmentRequest(orderData);
 
-      // 準備 FedEx API 請求數據
-      const shipmentRequest = this.prepareShipmentRequest(
-        orderData,
-        fileReferences
-      );
+      // 顯示實際發送的請求內容
+      logger.info('📤 發送到 FedEx API 的請求內容:');
+      console.log('=== FEDEX API REQUEST ===');
+      console.log('URL:', `${this.baseUrl}/ship/v1/shipments`);
+      console.log('Headers:', {
+        Authorization: `Bearer ${accessToken.substring(0, 20)}...`,
+        'Content-Type': 'application/json',
+        'X-locale': 'en_US',
+      });
+      console.log('Body:', JSON.stringify(shipmentRequest, null, 2));
+      console.log('=== END REQUEST ===');
 
       const response = await axios.post(
         `${this.baseUrl}/ship/v1/shipments`,
@@ -312,59 +247,101 @@ class FedExService {
   }
 
   /**
-   * 準備貨運請求數據
+   * 準備貨運請求數據（支援 ETD 功能）
    * @param {Object} orderData 訂單資料
-   * @param {Object} fileReferences 文件引用（信頭和簽名）
    * @returns {Object} 貨運請求數據
    */
-  prepareShipmentRequest(orderData, fileReferences = {}) {
-    // 解析地址資訊
+  prepareShipmentRequest(orderData) {
+    // 資料驗證和預設值處理
+    if (!orderData) throw new Error('訂單資料不能為空');
+    if (!orderData.order_number) throw new Error('訂單編號不能為空');
+
+    // 處理地址
+    const addressFields = {
+      address1: orderData.original_address_1 || orderData.address_1 || '',
+      address2: orderData.original_address_2 || orderData.address_2 || '',
+      city: orderData.city || '',
+      province: orderData.province || '',
+      country: orderData.country_code || '',
+      zip: orderData.postal_code || '',
+    };
+
+    const splitAddressResult = splitAddress(addressFields);
+
+    // 過濾空行並確保至少有一行地址
     const streetLines = [
-      orderData.processed_address_1,
-      orderData.processed_address_2,
-      orderData.processed_address_3,
+      splitAddressResult.address1,
+      splitAddressResult.address2,
+      splitAddressResult.address3,
     ].filter((line) => line && line.trim().length > 0);
 
-    // 確定收件國家代碼
-    const countryCode = orderData.country_code || 'SG';
-
-    // 計算商品重量 (假設每瓶 Neuralli MP 重量為 0.5 磅)
-    let totalWeight = 0.5; // 至少 0.5 磅
-    if (Array.isArray(orderData.items)) {
-      totalWeight = Math.max(
-        0.5,
-        orderData.items.reduce((sum, item) => {
-          return sum + (item.quantity || 1) * 0.5; // 每瓶 0.5 磅
-        }, 0)
-      );
+    // 如果沒有地址行，使用預設值
+    if (streetLines.length === 0) {
+      streetLines.push('Address not provided');
     }
 
+    const countryCode = orderData.country_code || 'SG';
+
+    // 計算商品資訊
+    let totalWeight = 0.07;
+    let totalQuantity = 1;
+    let productDescription = 'Neuralli MP - Asia';
+
+    if (Array.isArray(orderData.items) && orderData.items.length > 0) {
+      totalQuantity = orderData.items.reduce(
+        (sum, item) => sum + (item.quantity || 1),
+        0
+      );
+      totalWeight = Math.max(0.07, totalQuantity * 0.07);
+
+      // 使用第一個商品的描述，如果沒有則使用預設值
+      if (orderData.items[0].name) {
+        productDescription = orderData.items[0].name;
+      }
+    }
+
+    // 確保海關申報值使用 USD 格式
+    const customsValue = orderData.customs_value || 28;
+    const customsValueUSD =
+      typeof customsValue === 'string'
+        ? parseFloat(customsValue.replace(/[^\d.]/g, ''))
+        : customsValue;
+
+    // 動態計算單價（總價值除以數量）
+    const unitPrice =
+      totalQuantity > 0 ? customsValueUSD / totalQuantity : customsValueUSD;
+
+    // 記錄處理的訂單資訊
+    logger.info(
+      `處理訂單 ${orderData.order_number}: 數量=${totalQuantity}, 重量=${totalWeight}kg, 價值=$${customsValueUSD}`
+    );
+
     // 建構出貨請求
-    const requestData = {
+    return {
+      labelResponseOptions: 'LABEL',
+      customerTransactionId: orderData.order_number,
+      accountNumber: { value: config.fedex.accountNumber },
       requestedShipment: {
         shipper: {
           contact: {
-            personName: 'Benedbiomed Singapore',
-            phoneNumber: '6512345678',
-            emailAddress: 'shipping@benedbiomed.com',
+            personName: "Int'l Shipment Bened",
+            phoneNumber: '225111122',
+            companyName: 'Bened Life',
           },
           address: {
-            streetLines: ['1 Harbourfront Avenue', '#03-01 Keppel Bay Tower'],
-            city: 'Singapore',
-            postalCode: '098632',
-            countryCode: 'SG',
+            streetLines: ['8F, No. 508, Sec. 7,', 'Zhongxiao E. Road'],
+            city: 'TAIPEI CITY',
+            stateOrProvinceCode: '',
+            postalCode: '115',
+            countryCode: 'TW',
           },
         },
-        // 加入商業發票配置
-        commercialInvoice: this.prepareCommercialInvoice(
-          orderData,
-          fileReferences
-        ),
         recipients: [
           {
             contact: {
-              personName: orderData.customer_name,
-              phoneNumber: '1234567890', // 理想情況下應從訂單取得電話
+              personName: orderData.customer_name || 'Unknown Recipient',
+              phoneNumber: orderData.phone || '1234567890',
+              companyName: orderData.company || 'Recipient Company Name',
             },
             address: {
               streetLines,
@@ -376,64 +353,60 @@ class FedExService {
           },
         ],
         shipDatestamp: new Date().toISOString().split('T')[0],
-        serviceType: 'INTERNATIONAL_PRIORITY', // 國際優先
+        serviceType: 'INTERNATIONAL_PRIORITY',
         packagingType: 'YOUR_PACKAGING',
-        pickupType: 'DROPOFF_AT_FEDEX_LOCATION',
+        pickupType: 'USE_SCHEDULED_PICKUP',
         blockInsightVisibility: false,
-        shippingChargesPayment: {
-          paymentType: 'SENDER',
+        // ETD 特殊服務配置
+        shippingChargesPayment: { paymentType: 'SENDER' },
+        shipmentSpecialServices: {
+          specialServiceTypes: ['ELECTRONIC_TRADE_DOCUMENTS'],
+          // 商業發票文件規格
+          etdDetail: { requestedDocumentTypes: ['COMMERCIAL_INVOICE'] },
         },
-        labelSpecification: {},
+        shippingDocumentSpecification: {
+          shippingDocumentTypes: ['COMMERCIAL_INVOICE'],
+          commercialInvoiceDetail: {
+            documentFormat: { docType: 'PDF', stockType: 'PAPER_LETTER' },
+            customerImageUsages: [
+              {
+                id: 'IMAGE_1',
+                type: 'SIGNATURE',
+                providedImageType: 'SIGNATURE',
+              },
+              {
+                id: 'IMAGE_2',
+                type: 'LETTER_HEAD',
+                providedImageType: 'LETTER_HEAD',
+              },
+            ],
+          },
+        },
+        labelSpecification: { imageType: 'PDF', labelStockType: 'STOCK_4X6' },
         customsClearanceDetail: {
-          dutiesPayment: {
-            paymentType: 'SENDER',
-          },
-          totalCustomsValue: {
-            amount: orderData.customs_value || 28,
-            currency: 'USD',
-          },
+          dutiesPayment: { paymentType: 'SENDER' },
+          documentContent: 'COMMODITY',
           commodities: [
             {
-              description: 'Neuralli MP',
+              description: productDescription,
               countryOfManufacture: 'US',
-              quantity: 1,
+              quantity: totalQuantity,
               quantityUnits: 'PCS',
-              unitPrice: {
-                amount: orderData.customs_value || 28,
-                currency: 'USD',
-              },
-              weight: {
-                units: 'LB',
-                value: totalWeight,
-              },
+              unitPrice: { amount: unitPrice, currency: 'USD' },
+              customsValue: { amount: customsValueUSD, currency: 'USD' },
+              weight: { units: 'KG', value: totalWeight },
             },
           ],
         },
         requestedPackageLineItems: [
           {
-            weight: {
-              units: 'LB',
-              value: totalWeight,
-            },
-            dimensions: {
-              length: 8,
-              width: 6,
-              height: 4,
-              units: 'IN',
-            },
+            weight: { units: 'KG', value: totalWeight },
+            dimensions: { length: 26, width: 21, height: 17, units: 'CM' },
             groupPackageCount: 1,
           },
         ],
       },
-      accountNumber: {
-        value: config.fedex.accountNumber,
-      },
-      labelResponseOptions: 'URL_ONLY',
     };
-
-    // 移除 ETD 相關配置，因為我們使用 commercialInvoice 配置
-
-    return requestData;
   }
 
   extractErrorMessage(error) {
@@ -464,10 +437,7 @@ class FedExService {
         message: error.response.data?.error || error.message,
       };
     }
-    return {
-      status: 500,
-      message: error.message,
-    };
+    return { status: 500, message: error.message };
   }
 }
 

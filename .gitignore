@@ -54,3 +54,4 @@ scripts/test-*.js
 *.secret
 secrets/
 cookies.txt
+documents/ 
