@@ -6,6 +6,8 @@ const path = require('path');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 const { splitAddress } = require('../utils/addressSplitter');
+const documentStorageService = require('./documentStorageService');
+const databaseService = require('./databaseService');
 
 class FedExService {
   constructor() {
@@ -224,11 +226,87 @@ class FedExService {
         `成功建立 FedEx 貨運標籤，訂單編號: ${orderData.order_number}`
       );
 
+      // 處理文件存儲
+      const trackingNumber =
+        response.data.output?.transactionShipments?.[0]?.masterTrackingNumber;
+
+      // 正確取得 encodedLabel
+      const pieceResponses =
+        response.data.output?.transactionShipments?.[0]?.pieceResponses;
+      const packageDocuments = pieceResponses?.[0]?.packageDocuments;
+      const labelData = packageDocuments?.[0]?.encodedLabel;
+
+      let gcsLabelUrl = null;
+      let gcsInvoiceUrl = null;
+
+      // 上傳貨運標籤到 GCS
+      if (labelData) {
+        try {
+          const labelResult = await documentStorageService.uploadShippingLabel(
+            orderData.order_number,
+            labelData
+          );
+          gcsLabelUrl = labelResult.publicUrl;
+          logger.success(`貨運標籤已上傳到 GCS: ${gcsLabelUrl}`);
+        } catch (uploadError) {
+          logger.error(`上傳貨運標籤到 GCS 失敗: ${uploadError.message}`);
+        }
+      }
+
+      // 上傳商業發票到 GCS（如果有的話）
+      const invoiceData = response.data.output?.documentResults?.[0]?.document;
+      if (invoiceData) {
+        try {
+          const invoiceResult =
+            await documentStorageService.uploadCommercialInvoice(
+              orderData.order_number,
+              invoiceData
+            );
+          gcsInvoiceUrl = invoiceResult.publicUrl;
+          logger.success(`商業發票已上傳到 GCS: ${gcsInvoiceUrl}`);
+        } catch (uploadError) {
+          logger.error(`上傳商業發票到 GCS 失敗: ${uploadError.message}`);
+        }
+      }
+
+      // 儲存文件記錄到 Firestore
+      if (gcsLabelUrl || gcsInvoiceUrl) {
+        try {
+          const documentData = {
+            order_id: orderData.shopify_order_id,
+            order_number: orderData.order_number,
+            tracking_number: trackingNumber,
+            documents: {
+              shipping_label: gcsLabelUrl
+                ? {
+                    url: gcsLabelUrl,
+                    type: 'shipping-label',
+                    uploaded_at: new Date().toISOString(),
+                  }
+                : null,
+              commercial_invoice: gcsInvoiceUrl
+                ? {
+                    url: gcsInvoiceUrl,
+                    type: 'commercial-invoice',
+                    uploaded_at: new Date().toISOString(),
+                  }
+                : null,
+            },
+            created_at: new Date().toISOString(),
+          };
+
+          await databaseService.saveDocument(documentData);
+          logger.success(`文件記錄已儲存到 Firestore`);
+        } catch (dbError) {
+          logger.error(`儲存文件記錄到 Firestore 失敗: ${dbError.message}`);
+        }
+      }
+
       return {
         success: true,
-        trackingNumber:
-          response.data.output?.transactionShipments?.[0]?.masterTrackingNumber,
-        labelUrl: response.data.output?.labelResults?.[0]?.label,
+        trackingNumber,
+        labelUrl: gcsLabelUrl || labelData, // 優先返回 GCS URL
+        invoiceUrl: gcsInvoiceUrl,
         error: null,
       };
     } catch (error) {
@@ -256,14 +334,16 @@ class FedExService {
     if (!orderData) throw new Error('訂單資料不能為空');
     if (!orderData.order_number) throw new Error('訂單編號不能為空');
 
-    // 處理地址
+    // 處理地址 - 使用 Firestore 格式
+    const originalAddress = orderData.original_address || {};
+
     const addressFields = {
-      address1: orderData.original_address_1 || orderData.address_1 || '',
-      address2: orderData.original_address_2 || orderData.address_2 || '',
-      city: orderData.city || '',
-      province: orderData.province || '',
-      country: orderData.country_code || '',
-      zip: orderData.postal_code || '',
+      address1: originalAddress.address1 || '',
+      address2: originalAddress.address2 || '',
+      city: originalAddress.city || '',
+      province: originalAddress.province || '',
+      country: originalAddress.country_code || '',
+      zip: originalAddress.postal_code || '',
     };
 
     const splitAddressResult = splitAddress(addressFields);
@@ -345,9 +425,9 @@ class FedExService {
             },
             address: {
               streetLines,
-              city: orderData.city || 'Unknown',
-              stateOrProvinceCode: orderData.province || '',
-              postalCode: orderData.postal_code || '00000',
+              city: originalAddress.city || 'Unknown',
+              stateOrProvinceCode: originalAddress.province || '',
+              postalCode: originalAddress.postal_code || '00000',
               countryCode,
             },
           },

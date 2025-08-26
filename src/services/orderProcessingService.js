@@ -23,17 +23,21 @@ class OrderProcessingService {
       // 如果有傳入特定訂單ID，則處理這些訂單
       if (orderIds && orderIds.length > 0) {
         const allOrders = await this.databaseService.getAllOrders(1000);
-        ordersToProcess = allOrders.filter(
-          (order) =>
-            order.order_number &&
-            orderIds.includes(order.order_number.toString())
-        );
+        ordersToProcess = allOrders.filter((order) => {
+          // 支援同時使用 shopify_order_id 和 order_number
+          return (
+            (order.shopify_order_id &&
+              orderIds.includes(order.shopify_order_id.toString())) ||
+            (order.order_number &&
+              orderIds.includes(order.order_number.toString()))
+          );
+        });
 
         // 調試：檢查過濾結果
         logger.info(`總訂單數: ${allOrders.length}`);
         logger.info(`要查找的訂單編號: ${orderIds.join(', ')}`);
         logger.info(
-          `找到的訂單: ${ordersToProcess.map((o) => o.order_number).join(', ')}`
+          `找到的訂單: ${ordersToProcess.map((o) => `${o.order_number}(${o.shopify_order_id})`).join(', ')}`
         );
         logger.info(`找到 ${ordersToProcess.length} 筆指定訂單進行處理`);
       } else {

@@ -57,8 +57,13 @@ class OrderFileService {
 
       // 合併新舊資料，保留本地欄位
       const merged = newOrders.map((order) => {
-        const old = existingMap.get(order.shopify_order_id.toString());
-        return old ? { ...order, ...this.pickLocalFields(old) } : order;
+        // 統一使用 shopify_order_id 欄位
+        const orderId = order.shopify_order_id || order.id;
+        const old = existingMap.get(orderId.toString());
+        const orderWithId = { ...order, shopify_order_id: orderId };
+        return old
+          ? { ...orderWithId, ...this.pickLocalFields(old) }
+          : orderWithId;
       });
 
       await this.writeOrders(merged);

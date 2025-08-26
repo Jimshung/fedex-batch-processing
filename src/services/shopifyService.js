@@ -171,6 +171,8 @@ class ShopifyService {
         `${customer.first_name || ''} ${customer.last_name || ''}`.trim() ||
         shippingAddress.name ||
         'Unknown',
+      customer_email: customer.email || '',
+      phone: customer.phone || shippingAddress.phone || '',
       original_total_price: order.total_price || '0', // 保留原始總金額作為參考
       total_price: customsValue.toString(), // 使用報關金額作為總金額
       currency: 'USD', // 統一使用 USD
@@ -272,9 +274,9 @@ class ShopifyService {
       // === Shopify 原始資料 ===
       shopify_order_id: order.shopify_order_id,
       order_number: order.order_number,
-      customer_name: order.customer_name,
-      customer_email: order.customer_email,
-      phone: order.phone,
+      customer_name: order.customer_name || '',
+      customer_email: order.customer_email || '',
+      phone: order.phone || '',
 
       // === 地址資訊 ===
       original_address: {
