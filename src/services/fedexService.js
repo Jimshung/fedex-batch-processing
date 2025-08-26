@@ -229,43 +229,64 @@ class FedExService {
       // 處理文件存儲
       const trackingNumber =
         response.data.output?.transactionShipments?.[0]?.masterTrackingNumber;
+      const transactionId = response.data.transactionId;
+      const customerTransactionId = response.data.customerTransactionId;
 
-      // 正確取得 encodedLabel
-      const pieceResponses =
-        response.data.output?.transactionShipments?.[0]?.pieceResponses;
-      const packageDocuments = pieceResponses?.[0]?.packageDocuments;
-      const labelData = packageDocuments?.[0]?.encodedLabel;
+      // 記錄詳細的成功資訊
+      logger.info(`📦 FedEx 運送建立成功:`);
+      logger.info(`   - Shopify 訂單編號: ${orderData.order_number}`);
+      logger.info(`   - customerTransactionId: ${customerTransactionId}`);
+      logger.info(`   - FedEx 追蹤號碼: ${trackingNumber}`);
+      logger.info(`   - FedEx 交易識別碼: ${transactionId}`);
+
+      // 正確提取文件數據
+      const shipment = response.data.output?.transactionShipments?.[0];
 
       let gcsLabelUrl = null;
       let gcsInvoiceUrl = null;
 
-      // 上傳貨運標籤到 GCS
-      if (labelData) {
-        try {
-          const labelResult = await documentStorageService.uploadShippingLabel(
-            orderData.order_number,
-            labelData
-          );
-          gcsLabelUrl = labelResult.publicUrl;
-          logger.success(`貨運標籤已上傳到 GCS: ${gcsLabelUrl}`);
-        } catch (uploadError) {
-          logger.error(`上傳貨運標籤到 GCS 失敗: ${uploadError.message}`);
+      // 1. 提取並上傳貨運標籤 (Shipping Label)
+      // 路徑: output.transactionShipments[0].pieceResponses[0].packageDocuments[0].encodedLabel
+      const pieceResponses = shipment?.pieceResponses;
+      if (pieceResponses && pieceResponses.length > 0) {
+        const packageDocuments = pieceResponses[0]?.packageDocuments;
+        if (packageDocuments && packageDocuments.length > 0) {
+          const labelData = packageDocuments[0]?.encodedLabel;
+          if (labelData) {
+            try {
+              const labelResult =
+                await documentStorageService.uploadShippingLabel(
+                  orderData.order_number,
+                  labelData
+                );
+              gcsLabelUrl = labelResult.publicUrl;
+              logger.success(`貨運標籤已上傳到 GCS: ${gcsLabelUrl}`);
+            } catch (uploadError) {
+              logger.error(`上傳貨運標籤到 GCS 失敗: ${uploadError.message}`);
+            }
+          }
         }
       }
 
-      // 上傳商業發票到 GCS（如果有的話）
-      const invoiceData = response.data.output?.documentResults?.[0]?.document;
-      if (invoiceData) {
-        try {
-          const invoiceResult =
-            await documentStorageService.uploadCommercialInvoice(
-              orderData.order_number,
-              invoiceData
-            );
-          gcsInvoiceUrl = invoiceResult.publicUrl;
-          logger.success(`商業發票已上傳到 GCS: ${gcsInvoiceUrl}`);
-        } catch (uploadError) {
-          logger.error(`上傳商業發票到 GCS 失敗: ${uploadError.message}`);
+      // 2. 提取並上傳商業發票 (Commercial Invoice)
+      // 路徑: output.transactionShipments[0].shipmentDocuments[0].encodedLabel
+      const shipmentDocuments = shipment?.shipmentDocuments;
+      if (shipmentDocuments && shipmentDocuments.length > 0) {
+        const commercialInvoice = shipmentDocuments.find(
+          (doc) => doc.contentType === 'COMMERCIAL_INVOICE'
+        );
+        if (commercialInvoice && commercialInvoice.encodedLabel) {
+          try {
+            const invoiceResult =
+              await documentStorageService.uploadCommercialInvoice(
+                orderData.order_number,
+                commercialInvoice.encodedLabel
+              );
+            gcsInvoiceUrl = invoiceResult.publicUrl;
+            logger.success(`商業發票已上傳到 GCS: ${gcsInvoiceUrl}`);
+          } catch (uploadError) {
+            logger.error(`上傳商業發票到 GCS 失敗: ${uploadError.message}`);
+          }
         }
       }
 
@@ -302,9 +323,12 @@ class FedExService {
         }
       }
 
+      // 簡化的 FedEx 回應結構 - 只保留核心欄位
       return {
         success: true,
         trackingNumber,
+        transactionId,
+        customerTransactionId,
         labelUrl: gcsLabelUrl || labelData, // 優先返回 GCS URL
         invoiceUrl: gcsInvoiceUrl,
         error: null,
@@ -404,15 +428,16 @@ class FedExService {
       requestedShipment: {
         shipper: {
           contact: {
-            personName: "Int'l Shipment Bened",
-            phoneNumber: '225111122',
-            companyName: 'Bened Life',
+            personName: 'Bened Biomedical o/b Bened Life',
+            phoneNumber: '0225111122',
+            emailAddress: 'shipment@benedbiomed.com',
+            companyName: 'Bened Biomedical',
           },
           address: {
-            streetLines: ['8F, No. 508, Sec. 7,', 'Zhongxiao E. Road'],
-            city: 'TAIPEI CITY',
+            streetLines: ['5F-G, No. 27, Minquan Rd,', 'Tamsui Dist.'],
+            city: 'New Taipei City',
             stateOrProvinceCode: '',
-            postalCode: '115',
+            postalCode: '251',
             countryCode: 'TW',
           },
         },
@@ -464,6 +489,11 @@ class FedExService {
         },
         labelSpecification: { imageType: 'PDF', labelStockType: 'STOCK_4X6' },
         customsClearanceDetail: {
+          commercialInvoice: {
+            termsOfSale: 'DDP',
+            specialInstructions: 'PCE = BOT; 60 capsules/bot',
+            shipmentPurpose: 'SOLD',
+          },
           dutiesPayment: { paymentType: 'SENDER' },
           documentContent: 'COMMODITY',
           commodities: [
@@ -474,6 +504,7 @@ class FedExService {
               quantityUnits: 'PCS',
               unitPrice: { amount: unitPrice, currency: 'USD' },
               customsValue: { amount: customsValueUSD, currency: 'USD' },
+              harmonizedCode: '210690',
               weight: { units: 'KG', value: totalWeight },
             },
           ],

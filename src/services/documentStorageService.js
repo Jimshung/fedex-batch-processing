@@ -38,7 +38,10 @@ class DocumentStorageService {
         },
       });
 
-      // 4. 取得公開 URL
+      // 4. 設為公開存取
+      await file.makePublic();
+
+      // 5. 取得公開 URL
       const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
 
       logger.success(`貨運標籤上傳成功: ${publicUrl}`);
@@ -86,7 +89,10 @@ class DocumentStorageService {
         },
       });
 
-      // 4. 取得公開 URL
+      // 4. 設為公開存取
+      await file.makePublic();
+
+      // 5. 取得公開 URL
       const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
 
       logger.success(`商業發票上傳成功: ${publicUrl}`);
@@ -128,6 +134,9 @@ class DocumentStorageService {
           uploadedAt: new Date().toISOString(),
         },
       });
+
+      // 設為公開存取
+      await file.makePublic();
 
       // 取得公開 URL
       const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
